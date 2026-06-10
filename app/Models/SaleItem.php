@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SaleItem extends Model
 {
+
+
     protected $fillable = [
         'sales_id',
         'product_id',
@@ -16,7 +18,7 @@ class SaleItem extends Model
 
     public function sale(): BelongsTo
     {
-        return $this->belongsTo(Sale::class);
+        return $this->belongsTo(Sale::class, 'sales_id');
     }
 
     public function product(): BelongsTo
