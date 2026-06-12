@@ -15,10 +15,6 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
-    Route::resource('customers', CustomerController::class);
-});
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -33,4 +29,9 @@ Route::middleware(['auth'])->group(function () {
 Route::resource('sales', SaleController::class)
     ->middleware('auth');
 
+Route::view('/reports', 'reports.index')
+    ->name('reports.index')
+    ->middleware('auth');
+    
+    
 require __DIR__.'/auth.php';

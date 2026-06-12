@@ -1,68 +1,92 @@
-<nav x-data="{ open: false }" class="bg-white shadow-sm border-b">
+<nav x-data="{ open: false }"
+    class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
 
-    <div class="w-full px-6 lg:px-10">
-        <div class="flex justify-between items-center h-16">
+    <div class="w-full px-8">
+
+        <div class="flex items-center justify-between h-24">
 
             {{-- Left Side --}}
-            <div class="flex items-center space-x-10">
+            <div class="flex items-center gap-12 h-full">
 
                 {{-- Brand --}}
-                <a href="{{ route('dashboard') }}" class="text-xl font-bold text-blue-600">
+                <a href="{{ route('dashboard') }}"
+                    class="text-3xl font-bold tracking-wide text-[#0F6E8C]">
                     NNQUA
                 </a>
 
                 {{-- Desktop Menu --}}
-                <div class="hidden sm:flex items-center space-x-8">
+                <div class="hidden md:flex items-center h-full">
 
-                    <x-nav-link
-                        :href="route('dashboard')"
-                        :active="request()->routeIs('dashboard')">
+                    <a href="{{ route('dashboard') }}"
+                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-[17px]
+                        {{ request()->routeIs('dashboard')
+                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
+                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
                         Dashboard
-                    </x-nav-link>
+                    </a>
 
-                    <x-nav-link
-                        :href="route('products.index')"
-                        :active="request()->routeIs('products.*')">
+                    <a href="{{ route('products.index') }}"
+                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-[17px]
+                        {{ request()->routeIs('products.*')
+                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
+                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
                         Products
-                    </x-nav-link>
+                    </a>
 
-                    <x-nav-link
-                        :href="route('customers.index')"
-                        :active="request()->routeIs('customers.*')">
+                    <a href="{{ route('customers.index') }}"
+                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-[17px]
+                        {{ request()->routeIs('customers.*')
+                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
+                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
                         Customers
-                    </x-nav-link>
+                    </a>
 
-                    <x-nav-link
-                        :href="route('sales.index')"
-                        :active="request()->routeIs('sales.*')">
+                    <a href="{{ route('sales.index') }}"
+                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-[17px]
+                        {{ request()->routeIs('sales.*')
+                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
+                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
                         Sales
-                    </x-nav-link>
+                    </a>
+
+                    <a href="{{ route('reports.index') }}"
+                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-[17px]
+                        {{ request()->routeIs('reports.*')
+                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
+                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
+                        Reports
+                    </a>
 
                 </div>
 
             </div>
 
             {{-- Right Side --}}
-            <div class="hidden sm:flex items-center">
+            <div class="hidden md:flex items-center gap-4">
+
+                <div class="text-right">
+
+                    <p class="text-lg font-semibold text-slate-800">
+                        {{ Auth::user()->name }}
+                    </p>
+
+                    <p class="text-sm text-slate-500">
+                        Administrator
+                    </p>
+
+                </div>
 
                 <x-dropdown align="right" width="48">
 
                     <x-slot name="trigger">
-                        <button class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600">
 
-                            <div>
-                                {{ Auth::user()->name }}
-                            </div>
+                        <button
+                            class="w-12 h-12 rounded-full bg-[#0F6E8C] text-white font-bold shadow-sm hover:bg-[#0b5b74] transition">
 
-                            <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd"
-                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4
-                                    4a1 1 0 01-1.414 0l-4-4a1 1 0
-                                    010-1.414z"
-                                    clip-rule="evenodd" />
-                            </svg>
+                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
 
                         </button>
+
                     </x-slot>
 
                     <x-slot name="content">
@@ -91,14 +115,18 @@
 
             </div>
 
-            {{-- Mobile Hamburger --}}
-            <div class="sm:hidden">
+            {{-- Mobile Button --}}
+            <div class="md:hidden">
 
                 <button
                     @click="open = ! open"
-                    class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:bg-gray-100">
+                    class="inline-flex items-center justify-center p-2 rounded-md text-slate-600 hover:bg-slate-100">
 
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
 
                         <path
                             :class="{'hidden': open, 'inline-flex': !open}"
@@ -123,10 +151,13 @@
             </div>
 
         </div>
+
     </div>
 
     {{-- Mobile Menu --}}
-    <div x-show="open" class="sm:hidden border-t bg-white">
+    <div
+        x-show="open"
+        class="md:hidden bg-white border-t border-slate-200">
 
         <div class="py-2">
 
@@ -152,6 +183,12 @@
                 :href="route('sales.index')"
                 :active="request()->routeIs('sales.*')">
                 Sales
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link
+                :href="route('reports.index')"
+                :active="request()->routeIs('reports.*')">
+                Reports
             </x-responsive-nav-link>
 
         </div>
