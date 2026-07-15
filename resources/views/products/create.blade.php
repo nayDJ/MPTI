@@ -1,31 +1,60 @@
-<x-app-layout>
+@section('title', 'Tambah Produk')
+<x-app-layout x-data="{ submitting: false }">
 
-<form action="{{ route('products.store') }}" method="POST">
+<div class="min-h-screen bg-[#F3F6F8] p-8">
 
-    @csrf
+    <nav class="text-sm text-slate-400 mb-4">
+        <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
+        <span class="mx-1">›</span>
+        <a href="{{ route('products.index') }}" class="hover:text-[#0F6E8C] transition">Manajemen Inventaris</a>
+        <span class="mx-1">›</span>
+        <span class="text-slate-600">Tambah Produk</span>
+    </nav>
 
-    <input
-        type="text"
-        name="name"
-        placeholder="Nama Produk"
-    >
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 max-w-2xl">
+        <h1 class="text-2xl font-bold text-[#0F6E8C] mb-6">Tambah Produk Baru</h1>
 
-    <input
-        type="number"
-        name="stock"
-        placeholder="Stok"
-    >
+        <form action="{{ route('products.store') }}" method="POST" class="space-y-5" @submit="submitting = true">
+            @csrf
 
-    <input
-        type="number"
-        name="price"
-        placeholder="Harga"
-    >
+            <div>
+                <x-input-label for="name" value="Nama Produk" />
+                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" required />
+                <x-input-error :messages="$errors->get('name')" />
+            </div>
 
-    <button type="submit">
-        Simpan
-    </button>
+            <div>
+                <x-input-label for="category" value="Kategori" />
+                <x-text-input id="category" name="category" type="text" class="mt-1 block w-full" placeholder="Contoh: Aksesoris, Perlengkapan, Pengemasan" />
+                <x-input-error :messages="$errors->get('category')" />
+            </div>
 
-</form>
+            <div>
+                <x-input-label for="stock" value="Jumlah Stok" />
+                <x-text-input id="stock" name="stock" type="number" min="0" class="mt-1 block w-full" required />
+                <x-input-error :messages="$errors->get('stock')" />
+            </div>
+
+            <div>
+                <x-input-label for="price" value="Harga" />
+                <x-text-input id="price" name="price" type="number" step="0.01" min="0" class="mt-1 block w-full" required />
+                <x-input-error :messages="$errors->get('price')" />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4">
+                <a href="{{ route('products.index') }}"
+                    class="px-5 py-3 text-sm text-slate-600 hover:text-slate-800 font-medium">
+                    Batal
+                </a>
+                <button type="submit" :disabled="submitting"
+                    class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-6 py-3 rounded-xl text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    Simpan
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
 
 </x-app-layout>

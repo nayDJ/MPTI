@@ -6,6 +6,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\CategoryController;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -23,15 +27,21 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::resource('customers', CustomerController::class);
+    Route::post('customers/quick-add', [CustomerController::class, 'quickStore'])->name('customers.quick-add');
     Route::resource('products', ProductController::class);
+    Route::resource('expenses', ExpenseController::class);
+    Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
 });
+
+Route::get('/sales/export/pdf', [SaleController::class, 'exportPdf'])
+    ->middleware('auth')
+    ->name('sales.export.pdf');
 
 Route::resource('sales', SaleController::class)
     ->middleware('auth');
 
-Route::view('/reports', 'reports.index')
-    ->name('reports.index')
-    ->middleware('auth');
+Route::get('/reports',[ReportController::class, 'index'])->name('reports.index')
+ ->middleware('auth');
     
     
 require __DIR__.'/auth.php';

@@ -1,29 +1,26 @@
+@section('title', 'Profile')
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Profile') }}
-        </h2>
-    </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-profile-information-form')
-                </div>
-            </div>
+<div class="min-h-screen bg-[#F3F6F8] p-8">
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
-            </div>
+    <div class="max-w-3xl mx-auto">
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
-            </div>
+        <nav class="text-sm text-slate-400 mb-4">
+            <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
+            <span class="mx-1">›</span>
+            <span class="text-slate-600">Profile</span>
+        </nav>
+
+        <div class="space-y-6">
+            @include('profile.partials.update-profile-information-form')
+
+            @include('profile.partials.update-password-form')
+
+            @include('profile.partials.delete-user-form')
         </div>
+
     </div>
+
+</div>
+
 </x-app-layout>

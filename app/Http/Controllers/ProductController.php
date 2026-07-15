@@ -9,11 +9,38 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::latest()->get();
+        $search = $request->search;
+        $category = $request->category;
 
-        return view('products.index', compact('products'));
+        $products = Product::when($search, function ($q, $search) {
+            $q->where('name', 'like', "%{$search}%");
+        })->when($category, function ($q, $category) {
+            $q->where('category', $category);
+        })->latest()->paginate(10)->withQueryString();
+
+        $totalProducts = Product::when($search, function ($q, $search) {
+            $q->where('name', 'like', "%{$search}%");
+        })->when($category, function ($q, $category) {
+            $q->where('category', $category);
+        })->count();
+
+        $totalItems = Product::sum('stock');
+        $lowStockCount = Product::where('stock', '>', 0)->where('stock', '<=', 30)->count();
+        $outOfStockCount = Product::where('stock', '<=', 0)->count();
+        $categories = Product::select('category')->whereNotNull('category')->distinct()->pluck('category');
+
+        return view('products.index', compact(
+            'products',
+            'totalProducts',
+            'totalItems',
+            'lowStockCount',
+            'outOfStockCount',
+            'categories',
+            'search',
+            'category'
+        ));
     }
 
     public function create()
@@ -23,13 +50,17 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        Product::create([
-            'name' => $request->name,
-            'stock' => $request->stock,
-            'price' => $request->price
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
+            'stock' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
         ]);
 
-        return redirect()->route('products.index');
+        Product::create($data);
+
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil ditambahkan');
     }
 
     /**
@@ -37,7 +68,7 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        //
+        abort(404);
     }
 
     /**
@@ -50,19 +81,24 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        $product->update([
-            'name' => $request->name,
-            'stock' => $request->stock,
-            'price' => $request->price,
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
+            'stock' => 'required|integer|min:0',
+            'price' => 'required|numeric|min:0',
         ]);
 
-        return redirect()->route('products.index');
+        $product->update($data);
+
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil diupdate');
     }
 
     public function destroy(Product $product)
     {
         $product->delete();
 
-        return redirect()->route('products.index');
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil dihapus');
     }
 }

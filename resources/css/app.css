@@ -1,3 +1,224 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.floating-group {
+    position: relative;
+}
+
+.floating-input {
+    display: block;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    border-radius: 0;
+    padding: 1.75rem 1.25rem 0.5rem;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    outline: none;
+    transition: border-bottom-color 0.2s;
+    background: transparent;
+    color: rgba(255,255,255,0.9);
+}
+
+.floating-input:focus {
+    border-bottom-color: white;
+    border-bottom-width: 2px;
+    outline: none;
+    box-shadow: none;
+}
+
+.floating-input:-webkit-autofill,
+.floating-input:-webkit-autofill:hover,
+.floating-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px transparent inset;
+    -webkit-text-fill-color: rgba(255,255,255,0.9);
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.floating-label {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    color: white;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    background: transparent;
+    padding: 0 4px;
+}
+
+.floating-input:focus ~ .floating-label,
+.floating-input:not(:placeholder-shown) ~ .floating-label {
+    top: -0.625rem;
+    transform: translateY(0) scale(0.85);
+    color: white;
+}
+
+.btn-animated {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 48px;
+    background: #0F6E8C;    
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-animated::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -100%;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 0;
+    transition: right 0.4s ease;
+    z-index: -1;
+}
+
+.btn-animated:hover::before {
+    right: 0;
+}
+
+.btn-animated:hover {
+    color: #0F6E8C;
+    border-color: #0F6E8C;
+}
+
+.btn-animated .icon {
+    display: inline-flex;
+    transition: transform 0.3s ease;
+}
+
+.btn-animated:hover .icon {
+    transform: translateX(-4px);
+}
+
+.btn-animated-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 40px;
+    background: white;
+    color: #0F6E8C;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+}
+
+.btn-animated-outline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -100%;
+    width: 100%;
+    height: 100%;
+    background: #0F6E8C;
+    border-radius: 0;
+    transition: right 0.4s ease;
+    z-index: -1;
+}
+
+.btn-animated-outline:hover::before {
+    right: 0;
+}
+
+.btn-animated-outline:hover {
+    color: white;
+    border-color: #0F6E8C;
+}
+
+.btn-animated-outline .icon {
+    display: inline-flex;
+    transition: transform 0.3s ease;
+}
+
+.btn-animated-outline:hover .icon {
+    transform: translateX(-4px);
+}
+
+.btn-pdf {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #059669;
+    color: white;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-pdf::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -100%;
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: inherit;
+    transition: right 0.4s ease;
+    z-index: 0;
+}
+
+.btn-pdf:hover::before {
+    right: 0;
+}
+
+.btn-pdf:hover {
+    border-color: #059669;
+    color: black;
+}
+
+.btn-pdf .text {
+    position: relative;
+    z-index: 1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.btn-pdf .icon {
+    position: absolute;
+    z-index: 1;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.btn-pdf:hover .text {
+    opacity: 0;
+    transform: scale(0.3);
+}
+
+.btn-pdf:hover .icon {
+    opacity: 1;
+    transform: scale(1);
+}
+
+
