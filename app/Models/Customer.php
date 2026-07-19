@@ -10,7 +10,8 @@ class Customer extends Model
     protected $fillable = [
         'name',
         'address',
-        'phone'
+        'phone',
+        'is_active'
     ];
 
     public function sales(): HasMany

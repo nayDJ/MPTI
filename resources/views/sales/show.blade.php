@@ -3,18 +3,6 @@
 
 <div class="min-h-screen bg-[#F3F6F8] p-8">
 
-    @if(session('success'))
-        <div class="mb-6 bg-green-100 text-green-700 p-4 rounded-xl">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="mb-6 bg-red-100 text-red-600 p-4 rounded-xl">
-            {{ session('error') }}
-        </div>
-    @endif
-
         {{-- Header --}}
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
 

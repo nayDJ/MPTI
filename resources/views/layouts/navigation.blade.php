@@ -1,268 +1,156 @@
-<nav x-data="{ open: false }"
-    class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+<aside
+    :class="{
+        'w-64': sidebarOpen && !isMobile,
+        'w-16': !sidebarOpen && !isMobile,
+        'translate-x-0': sidebarOpen && isMobile,
+        '-translate-x-full': !sidebarOpen && isMobile,
+    }"
+    class="fixed left-0 top-0 h-screen bg-white shadow-md z-50 flex flex-col overflow-hidden"
+    :class="initialized ? 'transition-all duration-300' : ''">
 
-    <div class="w-full px-8">
-
-        <div class="flex items-center justify-between h-24">
-
-            {{-- Left Side --}}
-            <div class="flex items-center gap-12 h-full">
-
-                {{-- Brand --}}
-                <a href="{{ route('dashboard') }}"
-                    class="text-3xl font-bold tracking-wide text-[#0F6E8C]">
-                    NNQUA
-                </a>
-
-                {{-- Desktop Menu --}}
-                <div class="hidden md:flex items-center h-full">
-
-                    <a href="{{ route('dashboard') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('dashboard')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Dashboard
-                    </a>
-
-                    <a href="{{ route('products.index') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('products.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Produk
-                        @if($criticalStockCount > 0)
-                            <span class="ml-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $criticalStockCount }}</span>
-                        @endif
-                    </a>
-
-                    <a href="{{ route('customers.index') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('customers.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Pelanggan
-                    </a>
-
-                    <a href="{{ route('sales.index') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('sales.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Penjualan
-                        @if($pendingPaymentCount > 0)
-                            <span class="ml-2 bg-orange-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $pendingPaymentCount }}</span>
-                        @endif
-                    </a>
-
-
-                    <a href="{{ route('expenses.index') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('expenses.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Pengeluaran
-                    </a>
-
-                    <a href="{{ route('reports.index') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('reports.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Laporan
-                    </a>
-
-                    <a href="{{ route('profile.edit') }}"
-                        class="h-full px-6 flex items-center border-b-[3px] transition-all duration-200 text-lg
-                        {{ request()->routeIs('profile.*')
-                            ? 'border-[#0F6E8C] text-[#0F6E8C] font-semibold'
-                            : 'border-transparent text-slate-600 hover:text-[#0F6E8C]' }}">
-                        Profile
-                    </a>
-
-                </div>
+    {{-- Header: Logo + Hamburger --}}
+    <div class="flex items-center px-4 h-[72px] border-b border-gray-100"
+         :class="sidebarOpen || isMobile ? 'justify-between' : 'justify-center'">
+        {{-- Logo + Brand --}}
+        <a href="{{ route('dashboard') }}" class="flex items-center gap-3 min-w-0"
+           x-show="sidebarOpen || isMobile">
+            <svg class="w-11 h-11 flex-shrink-0" viewBox="272 35 130 180" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="smoothGrad2" x1="15%" y1="0%" x2="85%" y2="100%">
+                        <stop offset="0%" stop-color="#63A1B4"/>
+                        <stop offset="50%" stop-color="#0F6E8C"/>
+                        <stop offset="100%" stop-color="#0B4D62"/>
+                    </linearGradient>
+                </defs>
+                <path d="M340,40 C340,40 396,107.2 396,149.2 C396,181.4 370.8,205.2 340,205.2 C309.2,205.2 284,181.4 284,149.2 C284,107.2 340,40 340,40 Z" fill="url(#smoothGrad2)"/>
+                <ellipse cx="318" cy="95" rx="24" ry="34" fill="#ffffff" opacity="0.25"/>
+                <ellipse cx="313" cy="88" rx="9" ry="13" fill="#ffffff" opacity="0.35"/>
+            </svg>
+            <div x-show="sidebarOpen || isMobile" class="whitespace-nowrap">
+                <h1 class="text-lg font-bold text-[#0F6E8C] leading-tight">NNQUA</h1>
+                <p class="text-xs text-on-surface-variant leading-tight">Water Management</p>
             </div>
+        </a>
 
-            {{-- Right Side --}}
-            <div class="hidden md:flex items-center gap-4">
-
-                <div class="text-right">
-                    <div class="flex items-baseline gap-1.5">
-                        <span id="navTime" class="text-2xl font-bold tabular-nums text-slate-800" style="font-family: 'Orbitron', sans-serif;">00:00</span>
-                        <span id="navAmPm" class="text-xs font-semibold text-slate-500 uppercase">AM</span>
-                    </div>
-                    <div id="navDay" class="text-sm text-slate-500 tracking-wide">Monday, January 1st</div>
-                </div>
-
-                <div class="text-right">
-
-                    <p class="text-lg font-semibold text-slate-800">
-                        {{ Auth::user()->name }}
-                    </p>
-
-                    <p class="text-sm text-slate-500">
-                        Administrator
-                    </p>
-
-                </div>
-
-                <x-dropdown align="right" width="48">
-
-                    <x-slot name="trigger">
-
-                        <button
-                            class="w-12 h-12 rounded-full bg-[#0F6E8C] text-white font-bold shadow-sm hover:bg-[#0b5b74] transition">
-
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-
-                        </button>
-
-                    </x-slot>
-
-                    <x-slot name="content">
-
-                        <x-dropdown-link :href="route('profile.edit')">
-                            Profile
-                        </x-dropdown-link>
-
-                        <x-dropdown-link
-                            href="#"
-                            @click.prevent="$dispatch('open-modal', 'confirm-logout'); open = false">
-
-                            Logout
-
-                        </x-dropdown-link>
-
-                    </x-slot>
-
-                </x-dropdown>
-
-            </div>
-
-            {{-- Mobile Button --}}
-            <div class="md:hidden">
-
-                <button
-                    @click="open = ! open"
-                    class="inline-flex items-center justify-center p-2 rounded-md text-slate-600 hover:bg-slate-100">
-
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24">
-
-                        <path
-                            :class="{'hidden': open, 'inline-flex': !open}"
-                            class="inline-flex"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M4 6h16M4 12h16M4 18h16" />
-
-                        <path
-                            :class="{'hidden': !open, 'inline-flex': open}"
-                            class="hidden"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-
-                    </svg>
-
-                </button>
-
-            </div>
-
-        </div>
-
+        {{-- Hamburger --}}
+        <button @click="toggleSidebar()"
+                class="flex flex-col items-center justify-center w-10 h-10 gap-[5px] rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0">
+            <div class="w-5 h-[2.5px] bg-outline rounded transition-all duration-300"
+                 :class="sidebarOpen ? 'rotate-45 translate-y-[7.5px]' : ''"></div>
+            <div class="w-5 h-[2.5px] bg-outline rounded transition-all duration-300"
+                 :class="sidebarOpen ? 'opacity-0' : ''"></div>
+            <div class="w-5 h-[2.5px] bg-outline rounded transition-all duration-300"
+                 :class="sidebarOpen ? '-rotate-45 -translate-y-[7.5px]' : ''"></div>
+        </button>
     </div>
 
-    {{-- Mobile Menu --}}
-    <div
-        x-show="open"
-        class="md:hidden bg-white border-t border-slate-200">
+    {{-- Nav Items --}}
+    <nav class="flex-1 overflow-y-auto custom-scrollbar px-3 py-4 space-y-1">
+        {{-- Dashboard --}}
+        <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')"
+            icon="dashboard" label="Dashboard" />
 
-        <div class="py-2">
-
-            <x-responsive-nav-link
-                :href="route('dashboard')"
-                :active="request()->routeIs('dashboard')">
-                Dashboard
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link
-                :href="route('products.index')"
-                :active="request()->routeIs('products.*')">
-                Products
+        {{-- Produk --}}
+        <x-sidebar-link :href="route('products.index')" :active="request()->routeIs('products.*')"
+            icon="inventory_2" label="Produk">
+            <x-slot name="badge">
                 @if($criticalStockCount > 0)
-                    <span class="ml-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $criticalStockCount }}</span>
+                    <span x-show="sidebarOpen || isMobile"
+                          class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $criticalStockCount }}</span>
+                    <span x-show="!sidebarOpen && !isMobile"
+                          class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500"></span>
                 @endif
-            </x-responsive-nav-link>
+            </x-slot>
+        </x-sidebar-link>
 
-            <x-responsive-nav-link
-                :href="route('customers.index')"
-                :active="request()->routeIs('customers.*')">
-                Customers
-            </x-responsive-nav-link>
+        {{-- Pelanggan --}}
+        <x-sidebar-link :href="route('customers.index')" :active="request()->routeIs('customers.*')"
+            icon="group" label="Pelanggan" />
 
-            <x-responsive-nav-link
-                :href="route('sales.index')"
-                :active="request()->routeIs('sales.*')">
-                Sales
+        {{-- Penjualan --}}
+        <x-sidebar-link :href="route('sales.index')" :active="request()->routeIs('sales.*')"
+            icon="payments" label="Penjualan">
+            <x-slot name="badge">
                 @if($pendingPaymentCount > 0)
-                    <span class="ml-1 bg-orange-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $pendingPaymentCount }}</span>
+                    <span x-show="sidebarOpen || isMobile"
+                          class="bg-orange-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $pendingPaymentCount }}</span>
+                    <span x-show="!sidebarOpen && !isMobile"
+                          class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orange-400"></span>
                 @endif
-            </x-responsive-nav-link>
+            </x-slot>
+        </x-sidebar-link>
 
-            <x-responsive-nav-link
-                :href="route('reports.index')"
-                :active="request()->routeIs('reports.*')">
-                Reports
-            </x-responsive-nav-link>
+        {{-- Pengeluaran --}}
+        <x-sidebar-link :href="route('expenses.index')" :active="request()->routeIs('expenses.*')"
+            icon="receipt_long" label="Pengeluaran" />
 
-            <x-responsive-nav-link
-                :href="route('expenses.index')"
-                :active="request()->routeIs('expenses.*')">
-                Pengeluaran
-            </x-responsive-nav-link>
+        {{-- Laporan --}}
+        <x-sidebar-link :href="route('reports.index')" :active="request()->routeIs('reports.*')"
+            icon="assessment" label="Laporan" />
 
-            <x-responsive-nav-link
-                :href="route('profile.edit')"
-                :active="request()->routeIs('profile.*')">
-                Profile
-            </x-responsive-nav-link>
+        {{-- Notifikasi --}}
+        <x-sidebar-link :href="route('notifications.index')" :active="request()->routeIs('notifications.*')"
+            icon="notifications" label="Notifikasi">
+            <x-slot name="badge">
+                @if($unreadNotifCount > 0)
+                    <span x-show="sidebarOpen || isMobile"
+                          class="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $unreadNotifCount }}</span>
+                    <span x-show="!sidebarOpen && !isMobile"
+                          class="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-primary"></span>
+                @endif
+            </x-slot>
+        </x-sidebar-link>
 
-        </div>
+        {{-- Profile --}}
+        <x-sidebar-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')"
+            icon="account_circle" label="Profile" />
 
+    </nav>
+
+    {{-- Bottom: Logout + User Profile Card --}}
+    <div class="border-t border-gray-100 px-3 py-3 space-y-1">
+        {{-- Logout --}}
+        <button type="button"
+            @click="$dispatch('open-modal', 'confirm-logout')"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
+                   text-on-secondary-container/70 hover:bg-surface-container-high"
+            :class="sidebarOpen || isMobile ? '' : 'justify-center'">
+            <span class="material-symbols-outlined text-2xl flex-shrink-0">logout</span>
+            <span x-show="sidebarOpen || isMobile" class="text-sm font-medium truncate">Logout</span>
+        </button>
+
+        {{-- User Profile Card --}}
+        <a href="{{ route('profile.edit') }}"
+           class="flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 hover:bg-surface-container-low"
+           :class="sidebarOpen || isMobile ? '' : 'justify-center'">
+            <div class="w-8 h-8 rounded-full bg-[#0F6E8C] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+            </div>
+            <div x-show="sidebarOpen || isMobile" class="truncate">
+                <p class="text-sm font-semibold text-on-surface truncate">{{ Auth::user()->name }}</p>
+                <p class="text-[11px] text-on-surface-variant truncate">Administrator</p>
+            </div>
+        </a>
     </div>
+</aside>
 
-    <x-modal name="confirm-logout" focusable>
-        <div class="p-6 text-center">
-            <div class="mx-auto w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <svg class="w-7 h-7 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4m7 14l5-5-5-5m5 5H9"/>
-                </svg>
-            </div>
-            <h3 class="text-xl font-bold text-gray-900">Konfirmasi Logout</h3>
-            <p class="mt-3 text-sm text-gray-600">Apakah Anda yakin ingin logout dari sistem?</p>
-
-            <div class="mt-6 flex justify-center gap-4">
-                <button type="button"
-                        @click="$dispatch('close-modal', 'confirm-logout')"
-                        class="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Batal
-                </button>
-
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit"
-                            class="px-6 py-2 text-sm font-medium text-white bg-[#0F6E8C] rounded-lg hover:bg-[#0b5b74]">
-                        Ya, Logout
-                    </button>
-                </form>
-            </div>
+<x-modal name="confirm-logout" maxWidth="sm">
+    <form method="POST" action="{{ route('logout') }}" class="p-6">
+        @csrf
+        <div class="text-center">
+            <span class="material-symbols-outlined text-5xl text-[#0F6E8C] mb-4 inline-block">logout</span>
+            <h2 class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Logout</h2>
+            <p class="text-sm text-gray-500 mb-6">Apakah Anda yakin ingin logout?</p>
         </div>
-    </x-modal>
-
-</nav>
+        <div class="flex justify-end gap-3">
+            <button type="button" @click="$dispatch('close-modal', 'confirm-logout')"
+                class="px-5 py-2.5 text-sm text-on-surface-variant hover:text-on-surface font-medium">
+                Batal
+            </button>
+            <button type="submit"
+                class="bg-[#0F6E8C] hover:bg-[#0A4F66] text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow-sm">
+                Ya, Logout
+            </button>
+        </div>
+    </form>
+</x-modal>

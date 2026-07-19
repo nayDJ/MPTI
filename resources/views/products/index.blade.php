@@ -1,15 +1,20 @@
-@section('title', 'Manajemen Inventaris')
+@section('title', 'Daftar Produk')
+@section('topbar-title', 'Dashboard Produk')
 <x-app-layout>
 
-<div class="min-h-screen bg-[#F3F6F8] p-8" x-data="{
+<div class="min-h-screen bg-[#F3F6F8]" x-data="{
     submitting: false,
-    openEdit(id, name, category, stock, price) {
-        document.getElementById('edit-product-form').action = '/products/' + id;
+    openEdit(id, name, category, stock, price, lowStockAlertEnabled, lowStockThreshold) {
+        let form = document.getElementById('edit-product-form');
+        form.action = '/products/' + id;
         document.getElementById('edit-name').value = name;
-        document.getElementById('edit-category').value = category;
         document.getElementById('edit-stock').value = stock;
         document.getElementById('edit-price').value = price;
         document.getElementById('edit-product-id').value = id;
+        let data = Alpine.$data(form);
+        data.category = category || 'kemasan';
+        data.lowStockAlertEnabled = !!lowStockAlertEnabled;
+        data.lowStockThreshold = lowStockThreshold || 30;
         this.$dispatch('open-modal', 'edit-product');
     },
     confirmDelete(url) {
@@ -18,27 +23,21 @@
     },
     init() {
         @if(old('_form_type') === 'edit' && old('_edit_id'))
-            document.getElementById('edit-product-form').action = '/products/' + {{ json_encode(old('_edit_id')) }};
+            let form = document.getElementById('edit-product-form');
+            form.action = '/products/' + {{ json_encode(old('_edit_id')) }};
             document.getElementById('edit-name').value = {{ json_encode(old('name')) }};
-            document.getElementById('edit-category').value = {{ json_encode(old('category')) }};
             document.getElementById('edit-stock').value = {{ json_encode(old('stock')) }};
             document.getElementById('edit-price').value = {{ json_encode(old('price')) }};
             document.getElementById('edit-product-id').value = {{ json_encode(old('_edit_id')) }};
+            let data = Alpine.$data(form);
+            data.category = {{ json_encode(old('category')) }} || 'kemasan';
+            data.lowStockAlertEnabled = {{ old('low_stock_alert_enabled') ? 'true' : 'false' }};
+            data.lowStockThreshold = {{ old('low_stock_threshold', 30) }};
         @endif
     }
 }">
 
-    @if(session('success'))
-        <div class="mb-6 bg-green-100 text-green-700 p-4 rounded-xl">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="mb-6 bg-red-100 text-red-600 p-4 rounded-xl">
-            {{ session('error') }}
-        </div>
-    @endif
+    <div class="p-8">
 
     {{-- Header --}}
     <div class="flex justify-between items-start mb-8">
@@ -47,147 +46,295 @@
             <nav class="text-sm text-slate-400 mb-1">
                 <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
                 <span class="mx-1">›</span>
-                <span class="text-slate-600">Manajemen Inventaris</span>
+                <span class="text-slate-600">Daftar Produk</span>
             </nav>
 
             <h1 class="text-3xl font-bold text-[#0F6E8C]">
-                Manajemen Inventaris
+                Daftar Produk
             </h1>
 
             <p class="text-gray-500 mt-1">
-                Pantau stok aset dan perlengkapan NNQUA secara real-time.
+                Kelola ketersediaan stok dan harga produk NNQUA
             </p>
         </div>
 
         <button
             @click="$dispatch('open-modal', 'add-product')"
-            class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-3 rounded-xl shadow-sm transition whitespace-nowrap">
-            + Tambah Produk Baru
+            class="bg-primary hover:bg-primary-container text-white px-5 py-3 rounded-xl shadow-sm transition whitespace-nowrap inline-flex items-center gap-2">
+            <span class="material-symbols-outlined">add_circle</span>
+            Tambah Produk
         </button>
 
     </div>
 
     {{-- Stats --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
 
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-            <p class="text-sm text-gray-500">Total Jenis Item</p>
-            <h2 class="text-3xl font-bold mt-2">{{ $totalProducts }}</h2>
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
+            <div class="flex justify-between items-start">
+                <span class="material-symbols-outlined text-primary bg-primary-container/10 p-2 rounded-lg">inventory</span>
+            </div>
+            <div>
+                <p class="text-sm text-on-surface-variant">Total SKU</p>
+                <p class="text-3xl font-bold text-on-surface">{{ $totalProducts }}</p>
+            </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-            <p class="text-sm text-gray-500">Stok Rendah</p>
-            <h2 class="text-3xl font-bold text-yellow-500 mt-2">{{ $lowStockCount }}</h2>
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
+            <div class="flex justify-between items-start">
+                <span class="material-symbols-outlined text-tertiary bg-tertiary-container/10 p-2 rounded-lg">warning</span>
+            </div>
+            <div>
+                <p class="text-sm text-on-surface-variant">Stok Rendah ≤ 30</p>
+                <p class="text-3xl font-bold text-yellow-500">{{ $lowStockCount }}</p>
+            </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border p-6">
-            <p class="text-sm text-gray-500">Habis (Kosong)</p>
-            <h2 class="text-3xl font-bold text-red-500 mt-2">{{ $outOfStockCount }}</h2>
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
+            <div class="flex justify-between items-start">
+                <span class="material-symbols-outlined text-error bg-error-container/10 p-2 rounded-lg">priority_high</span>
+            </div>
+            <div>
+                <p class="text-sm text-on-surface-variant">Stok Kritis < 10</p>
+                <p class="text-3xl font-bold text-red-500">{{ $criticalStockCount }}</p>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
+            <div class="flex justify-between items-start">
+                <span class="material-symbols-outlined text-secondary bg-secondary-container/10 p-2 rounded-lg">block</span>
+            </div>
+            <div>
+                <p class="text-sm text-on-surface-variant">Habis</p>
+                <p class="text-3xl font-bold text-red-700">{{ $outOfStockCount }}</p>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
+            <div class="flex justify-between items-start">
+                <span class="material-symbols-outlined text-secondary bg-secondary-container/10 p-2 rounded-lg">account_balance_wallet</span>
+            </div>
+            <div>
+                <p class="text-sm text-on-surface-variant">Valuasi Stok</p>
+                <p class="text-3xl font-bold text-on-surface">Rp {{ number_format($totalValuation) }}</p>
+            </div>
         </div>
 
     </div>
 
     {{-- Table --}}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
 
-        <div class="p-6 border-b flex items-center justify-between gap-4 flex-wrap">
-            <h2 class="text-xl font-bold text-slate-800">Daftar Stok Inventaris</h2>
+        <div class="p-5 border-b border-outline-variant/20">
 
-            <div class="flex gap-2">
-                <a href="{{ route('products.index') }}"
-                   class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 {{ request()->has('category') || request()->has('search') ? '' : 'hidden' }}">
-                    Reset
-                </a>
+            <form method="GET" action="{{ route('products.index') }}"
+                  x-data="{
+                      showFilter: false,
+                      selectedCategory: '{{ request('category', '') }}',
+                      searchQuery: '{{ request('search', '') }}',
+                      categories: [
+                          { val: '', label: 'Semua Kategori' },
+                          { val: 'galon', label: 'Galon' },
+                          { val: 'air_tanki', label: 'Air Tanki' },
+                          { val: 'kemasan', label: 'Kemasan' },
+                          { val: 'lainnya', label: 'Lainnya' }
+                      ],
+                      selectCategory(val) {
+                          this.selectedCategory = val;
+                          this.showFilter = false;
+                          this.$refs.categoryInput.value = val;
+                          this.$refs.filterForm.submit();
+                      }
+                  }"
+                  class="flex flex-col md:flex-row justify-between items-center gap-4"
+                  x-ref="filterForm">
 
-                <form method="GET" action="{{ route('products.index') }}" class="flex gap-2">
-                    @if(request('category'))
-                        <input type="hidden" name="category" value="{{ request('category') }}">
-                    @endif
+                <div class="relative w-full md:w-80">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
                     <input type="text" name="search" value="{{ $search ?? '' }}"
-                        placeholder="Cari inventaris..."
-                        class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-64">
-                    <button type="submit"
-                        class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-4 py-2 rounded-lg text-sm transition">
-                        Cari
+                        placeholder="Cari nama produk atau kategori..."
+                        x-model="searchQuery"
+                        class="w-full pl-10 pr-4 py-2 border border-outline rounded-lg text-sm focus:ring-primary focus:border-primary bg-surface-container-low">
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <button type="button" @click="showFilter = !showFilter"
+                            class="flex items-center gap-1 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition text-sm">
+                            <span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                            <span x-show="selectedCategory" x-cloak class="w-2 h-2 rounded-full bg-primary"></span>
+                        </button>
+
+                        <div x-show="showFilter" @click.outside="showFilter = false" x-cloak
+                            class="absolute right-0 mt-2 w-48 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-lg z-20 overflow-hidden py-1">
+                            <template x-for="item in categories" :key="item.val">
+                                <button type="button"
+                                    @click="selectCategory(item.val)"
+                                    class="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors"
+                                    :class="selectedCategory === item.val ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface'">
+                                    <span x-show="selectedCategory === item.val" class="material-symbols-outlined text-primary text-base">check</span>
+                                    <span x-text="item.label"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <a href="{{ route('products.index', array_merge(request()->query(), ['is_active' => ''])) }}"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border {{ request('is_active', '') === '' ? 'bg-primary/10 text-primary border-primary/30' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high' }}">
+                            Semua
+                        </a>
+                        <a href="{{ route('products.index', array_merge(request()->query(), ['is_active' => '1'])) }}"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border {{ request('is_active') === '1' ? 'bg-[#dcfce7] text-[#166534] border-[#bbf7d0]' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high' }}">
+                            Aktif
+                        </a>
+                        <a href="{{ route('products.index', array_merge(request()->query(), ['is_active' => '0'])) }}"
+                            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border {{ request('is_active') === '0' ? 'bg-red-100 text-red-500 border-red-200' : 'border-outline-variant text-on-surface-variant hover:bg-surface-container-high' }}">
+                            Nonaktif
+                        </a>
+                    </div>
+
+                    <a href="{{ route('products.export.pdf', request()->only(['search', 'category', 'is_active'])) }}"
+                       class="btn-pdf inline-flex items-center gap-2">
+                        <span class="text">PDF</span>
+                        <span class="icon material-symbols-outlined">picture_as_pdf</span>
+                    </a>
+
+                    <button type="submit" x-show="searchQuery || selectedCategory" x-cloak
+                        class="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-white hover:bg-primary-container transition shadow-sm">
+                        <span class="material-symbols-outlined text-lg">search</span>
                     </button>
-                </form>
-            </div>
+
+                    @if(request('search') || request('category'))
+                        <a href="{{ route('products.index') }}"
+                            class="flex items-center gap-1 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition text-sm">
+                            <span class="material-symbols-outlined text-[18px]">refresh</span>
+                            Reset
+                        </a>
+                    @endif
+
+                    <input type="hidden" name="category" x-ref="categoryInput" value="{{ request('category', '') }}">
+                    <input type="hidden" name="is_active" value="{{ request('is_active', '') }}">
+                </div>
+            </form>
+
         </div>
 
         <div class="overflow-x-auto">
             <table class="w-full">
 
                 <thead>
-                    <tr class="bg-slate-50 border-b">
-                        <th class="p-4 text-left">Nama Produk</th>
-                        <th class="p-4 text-left">Kategori</th>
-                        <th class="p-4 text-left">Jumlah Stok</th>
-                        <th class="p-4 text-left">Status</th>
-                        <th class="p-4 text-center">Aksi</th>
+                    <tr class="bg-surface-container-low/50">
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Nama Produk</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Kategori</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-center">Stok</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Status Stok</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Status</th>
+                        <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-center">Aksi</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @forelse($products as $product)
-                        <tr class="border-b hover:bg-slate-50">
-                            <td class="p-4 font-medium">{{ $product->name }}</td>
-                            <td class="p-4 text-slate-500">{{ $product->category ?? '-' }}</td>
-                            <td class="p-4">{{ number_format($product->stock) }} Unit</td>
-                            <td class="p-4">
-                                @if($product->stock <= 0)
-                                    <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
-                                        <span class="w-2 h-2 rounded-full bg-red-600"></span>
-                                        Habis
-                                    </span>
-                                @elseif($product->stock <= 30)
-                                    <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
-                                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-                                        Stok Menipis
-                                    </span>
+                        <tr class="border-b border-outline-variant/20 hover:bg-primary-container/5 transition-colors group">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-12 w-12 rounded-lg bg-secondary-container/30 flex items-center justify-center flex-shrink-0">
+                                        <span class="material-symbols-outlined text-outline">inventory_2</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-on-surface group-hover:text-primary transition-colors">{{ $product->name }}</p>
+                                        <p class="text-xs text-on-surface-variant">NQ-{{ str_pad($product->id, 3, '0', STR_PAD_LEFT) }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                    @if(in_array($product->category, ['galon', 'air_tanki', 'kemasan', 'lainnya']))
+                                        bg-primary-container/10 text-primary-container
+                                    @else
+                                        bg-secondary-container text-on-secondary-container
+                                    @endif">
+                                    {{ $product->category ? ucfirst(str_replace('_', ' ', $product->category)) : '-' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <p class="font-bold text-on-surface">{{ number_format($product->stock) }}</p>
+                                <p class="text-[10px] text-on-surface-variant">Unit</p>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if($product->is_active)
+                                    @php
+                                        $threshold = $product->low_stock_alert_enabled ? $product->low_stock_threshold : 30;
+                                    @endphp
+                                    @if($product->stock <= 0)
+                                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+                                            <span class="w-2 h-2 rounded-full bg-red-600"></span>
+                                            Habis
+                                        </span>
+                                    @elseif($product->stock < 10)
+                                        <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 animate-pulse">
+                                            <span class="w-2 h-2 rounded-full bg-red-600"></span>
+                                            Stok Kritis
+                                        </span>
+                                    @elseif($product->low_stock_alert_enabled && $product->stock <= $threshold)
+                                        <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+                                            <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                                            Stok Menipis
+                                        </span>
+                                    @else
+                                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+                                            <span class="w-2 h-2 rounded-full bg-green-600"></span>
+                                            Tersedia
+                                        </span>
+                                    @endif
                                 @else
-                                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
-                                        <span class="w-2 h-2 rounded-full bg-green-600"></span>
-                                        Tersedia
-                                    </span>
+                                    <span class="text-gray-400">-</span>
                                 @endif
                             </td>
-                            <td class="p-4">
+                            <td class="px-4 py-3">
+                                @if($product->is_active)
+                                    <span class="text-green-600 font-semibold">Aktif</span>
+                                @else
+                                    <span class="text-red-500 font-semibold">Nonaktif</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
                                 <div class="flex items-center justify-center gap-2">
                                     <button
-                                        @click="openEdit({{ json_encode($product->id) }}, {{ json_encode($product->name) }}, {{ json_encode($product->category) }}, {{ json_encode($product->stock) }}, {{ json_encode($product->price) }})"
+                                        @click="openEdit({{ json_encode($product->id) }}, {{ json_encode($product->name) }}, {{ json_encode($product->category) }}, {{ json_encode($product->stock) }}, {{ json_encode($product->price) }}, {{ json_encode($product->low_stock_alert_enabled) }}, {{ json_encode($product->low_stock_threshold) }})"
                                         title="Edit"
-                                        class="bg-gray-400 hover:bg-gray-500 text-white p-2 rounded-lg transition relative group">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                                        </svg>
-                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">Edit</span>
+                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                        <span class="material-symbols-outlined">edit</span>
                                     </button>
+                                    <form method="POST" action="{{ route('products.toggle-status', $product) }}" class="inline">
+                                        @csrf
+                                        <button type="submit"
+                                            title="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"
+                                            class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                            <span class="material-symbols-outlined">{{ $product->is_active ? 'toggle_on' : 'toggle_off' }}</span>
+                                        </button>
+                                    </form>
                                     <button
                                         @click="confirmDelete('/products/' + {{ $product->id }})"
                                         title="Hapus"
-                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition relative group">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">Hapus</span>
+                                        class="p-1.5 text-on-surface-variant hover:text-error hover:bg-error-container/10 rounded-lg transition-colors">
+                                        <span class="material-symbols-outlined">delete</span>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center py-16 text-gray-500">
-                                <svg class="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                                <p class="text-lg font-medium text-gray-400 mb-2">Belum ada data produk</p>
-                                <p class="text-sm text-gray-400 mb-6">Tambah produk pertama Anda untuk memulai</p>
+                            <td colspan="6" class="text-center py-16 text-on-surface-variant">
+                                <span class="material-symbols-outlined text-6xl text-outline-variant mb-4 inline-block">inventory_2</span>
+                                <p class="text-lg font-medium text-on-surface-variant mb-2">Belum ada data produk</p>
+                                <p class="text-sm text-on-surface-variant mb-6">Tambah produk pertama Anda untuk memulai</p>
                                 <button
                                     @click="$dispatch('open-modal', 'add-product')"
-                                    class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition inline-flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                    </svg>
+                                    class="bg-primary hover:bg-primary-container text-white px-5 py-2.5 rounded-lg text-sm font-medium transition inline-flex items-center gap-2">
+                                    <span class="material-symbols-outlined">add_circle</span>
                                     Tambah Produk
                                 </button>
                             </td>
@@ -198,8 +345,8 @@
             </table>
         </div>
 
-        <div class="p-4 border-t flex items-center justify-between">
-            <p class="text-sm text-slate-500">
+        <div class="p-4 border-t border-outline-variant/20 bg-surface-container-low/30 flex items-center justify-between">
+            <p class="text-sm text-on-surface-variant">
                 Menampilkan {{ $products->firstItem() ?? 0 }}-{{ $products->lastItem() ?? 0 }} dari {{ $products->total() }} item
             </p>
             {{ $products->links() }}
@@ -209,90 +356,308 @@
 
 </div>
 
+</div>
+
 {{-- Modal Tambah Produk --}}
-<x-modal name="add-product" :show="$errors->any() && old('_form_type') === 'add'" focusable>
-    <form action="{{ route('products.store') }}" method="POST" class="p-6" @submit="submitting = true">
+<x-modal name="add-product" :show="$errors->any() && old('_form_type') === 'add'" maxWidth="2xl" focusable>
+    <form action="{{ route('products.store') }}" method="POST" @submit="submitting = true"
+        x-data="{
+            category: '{{ old('category') ?: 'kemasan' }}',
+            otherCategory: '',
+            lowStockAlertEnabled: {{ old('low_stock_alert_enabled') ? 'true' : 'true' }},
+            lowStockThreshold: {{ old('low_stock_threshold', 30) }},
+        }">
         @csrf
         <input type="hidden" name="_form_type" value="add">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">Tambah Produk Baru</h2>
 
-        <div class="space-y-4">
-            <div>
-                <x-input-label for="name" value="Nama Produk" />
-                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('name')" />
-            </div>
-            <div>
-                <x-input-label for="category" value="Kategori" />
-                <x-text-input id="category" name="category" type="text" class="mt-1 block w-full" placeholder="Contoh: Aksesoris, Perlengkapan, Pengemasan" />
-                <x-input-error :messages="$errors->get('category')" />
-            </div>
-            <div>
-                <x-input-label for="stock" value="Jumlah Stok" />
-                <x-text-input id="stock" name="stock" type="number" min="0" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('stock')" />
-            </div>
-            <div>
-                <x-input-label for="price" value="Harga" />
-                <x-text-input id="price" name="price" type="number" step="0.01" min="0" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('price')" />
-            </div>
-        </div>
+        <div class="glass-panel rounded-xl shadow-xl flex flex-col max-h-[640px] overflow-y-auto">
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" @click="$dispatch('close-modal', 'add-product')"
-                class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-                Batal
-            </button>
-            <button type="submit" :disabled="submitting"
-                class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Simpan
-            </button>
+            <div class="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">inventory_2</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-on-surface">Tambah Produk</h2>
+                        <p class="text-sm text-on-surface-variant">Kelola inventaris air minum Anda</p>
+                    </div>
+                </div>
+                <button type="button" @click="$dispatch('close-modal', 'add-product')"
+                    class="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant flex items-center justify-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            @if($errors->any() && old('_form_type') === 'add')
+                <div class="mx-6 mt-4 bg-error-container text-on-error-container p-3 rounded-lg text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Nama Produk</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory</span>
+                            <input type="text" name="name" value="{{ old('name') }}"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                placeholder="Masukkan nama produk..." required>
+                        </div>
+                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Kategori Produk</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'galon' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="galon" x-model="category" class="text-primary focus:ring-primary">
+                                Galon
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'air_tanki' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="air_tanki" x-model="category" class="text-primary focus:ring-primary">
+                                Air Tanki
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'kemasan' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="kemasan" x-model="category" class="text-primary focus:ring-primary">
+                                Kemasan
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'lainnya' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="lainnya" x-model="category" class="text-primary focus:ring-primary">
+                                Lainnya
+                            </label>
+                        </div>
+                        <input type="hidden" name="category" x-bind:value="category === 'lainnya' ? otherCategory : category">
+                        <div x-show="category === 'lainnya'" x-cloak class="mt-2">
+                            <input type="text" x-model="otherCategory" name="other_category"
+                                class="w-full px-3 py-2 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                placeholder="Masukkan nama kategori...">
+                        </div>
+                        <x-input-error :messages="$errors->get('category')" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
+                            <input type="number" name="stock" min="0" value="{{ old('stock', 0) }}"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                required>
+                        </div>
+                        <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Harga Jual per Unit</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">payments</span>
+                            <input type="number" name="price" step="0.01" min="0" value="{{ old('price', 0) }}"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                required>
+                        </div>
+                        <x-input-error :messages="$errors->get('price')" class="mt-1" />
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-on-surface">Peringatan Stok Rendah</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="low_stock_alert_enabled" value="1"
+                                    x-model="lowStockAlertEnabled" class="sr-only peer">
+                                <div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                        <p class="text-xs text-on-surface-variant mb-3">Sistem akan memberi notifikasi saat stok di bawah ambang batas yang ditentukan.</p>
+                        <div x-show="lowStockAlertEnabled" x-cloak>
+                            <input type="range" name="low_stock_threshold" min="0" max="100"
+                                x-model="lowStockThreshold"
+                                class="w-full h-1.5 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary">
+                            <div class="flex justify-between mt-1 font-label-numeric text-[10px] text-outline">
+                                <span>Min: 0</span>
+                                <span x-text="'Threshold: ' + lowStockThreshold" class="text-primary font-semibold"></span>
+                                <span>Max: 100</span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="low_stock_alert_enabled" x-bind:value="lowStockAlertEnabled ? '1' : '0'">
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant/20 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'add-product')"
+                    class="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface font-medium">
+                    Batal
+                </button>
+                <button type="submit" :disabled="submitting"
+                    class="btn-primary-animate px-5 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm flex items-center gap-2 shadow-md shadow-primary/20 hover:shadow-lg transition-all disabled:opacity-50">
+                    <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL'1;">save</span>
+                    Simpan Produk
+                </button>
+            </div>
+
         </div>
     </form>
 </x-modal>
 
 {{-- Modal Edit Produk --}}
-<x-modal name="edit-product" :show="$errors->any() && old('_form_type') === 'edit'" focusable>
-    <form id="edit-product-form" method="POST" class="p-6" @submit="submitting = true">
+<x-modal name="edit-product" :show="$errors->any() && old('_form_type') === 'edit'" maxWidth="2xl" focusable>
+    <form id="edit-product-form" method="POST" @submit="submitting = true"
+        x-data="{
+            category: 'kemasan',
+            otherCategory: '',
+            lowStockAlertEnabled: true,
+            lowStockThreshold: 30,
+        }">
         @csrf
         @method('PUT')
         <input type="hidden" name="_form_type" value="edit">
         <input type="hidden" name="_edit_id" id="edit-product-id">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Produk</h2>
 
-        <div class="space-y-4">
-            <div>
-                <x-input-label for="edit-name" value="Nama Produk" />
-                <x-text-input id="edit-name" name="name" type="text" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('name')" />
-            </div>
-            <div>
-                <x-input-label for="edit-category" value="Kategori" />
-                <x-text-input id="edit-category" name="category" type="text" class="mt-1 block w-full" />
-                <x-input-error :messages="$errors->get('category')" />
-            </div>
-            <div>
-                <x-input-label for="edit-stock" value="Jumlah Stok" />
-                <x-text-input id="edit-stock" name="stock" type="number" min="0" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('stock')" />
-            </div>
-            <div>
-                <x-input-label for="edit-price" value="Harga" />
-                <x-text-input id="edit-price" name="price" type="number" step="0.01" min="0" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('price')" />
-            </div>
-        </div>
+        <div class="glass-panel rounded-xl shadow-xl flex flex-col max-h-[640px] overflow-y-auto">
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" @click="$dispatch('close-modal', 'edit-product')"
-                class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-                Batal
-            </button>
-            <button type="submit" :disabled="submitting"
-                class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Simpan
-            </button>
+            <div class="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">edit</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-on-surface">Edit Produk</h2>
+                        <p class="text-sm text-on-surface-variant">Ubah data inventaris produk.</p>
+                    </div>
+                </div>
+                <button type="button" @click="$dispatch('close-modal', 'edit-product')"
+                    class="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant flex items-center justify-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            @if($errors->any() && old('_form_type') === 'edit')
+                <div class="mx-6 mt-4 bg-error-container text-on-error-container p-3 rounded-lg text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Nama Produk</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory</span>
+                            <input type="text" id="edit-name" name="name"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                placeholder="Masukkan nama produk..." required>
+                        </div>
+                        <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Kategori Produk</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'galon' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="galon" x-model="category" class="text-primary focus:ring-primary">
+                                Galon
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'air_tanki' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="air_tanki" x-model="category" class="text-primary focus:ring-primary">
+                                Air Tanki
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'kemasan' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="kemasan" x-model="category" class="text-primary focus:ring-primary">
+                                Kemasan
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="category === 'lainnya' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="category_radio" value="lainnya" x-model="category" class="text-primary focus:ring-primary">
+                                Lainnya
+                            </label>
+                        </div>
+                        <input type="hidden" name="category" x-bind:value="category === 'lainnya' ? otherCategory : category">
+                        <div x-show="category === 'lainnya'" x-cloak class="mt-2">
+                            <input type="text" x-model="otherCategory"
+                                class="w-full px-3 py-2 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                placeholder="Masukkan nama kategori...">
+                        </div>
+                        <x-input-error :messages="$errors->get('category')" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
+                            <input type="number" id="edit-stock" name="stock" min="0"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                required>
+                        </div>
+                        <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Harga Jual per Unit</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">payments</span>
+                            <input type="number" id="edit-price" name="price" step="0.01" min="0"
+                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                                required>
+                        </div>
+                        <x-input-error :messages="$errors->get('price')" class="mt-1" />
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-on-surface">Peringatan Stok Rendah</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="low_stock_alert_enabled" value="1"
+                                    x-model="lowStockAlertEnabled" class="sr-only peer">
+                                <div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                        <p class="text-xs text-on-surface-variant mb-3">Sistem akan memberi notifikasi saat stok di bawah ambang batas yang ditentukan.</p>
+                        <div x-show="lowStockAlertEnabled" x-cloak>
+                            <input type="range" name="low_stock_threshold" min="0" max="100"
+                                x-model="lowStockThreshold"
+                                class="w-full h-1.5 bg-outline-variant rounded-lg appearance-none cursor-pointer accent-primary">
+                            <div class="flex justify-between mt-1 font-label-numeric text-[10px] text-outline">
+                                <span>Min: 0</span>
+                                <span x-text="'Threshold: ' + lowStockThreshold" class="text-primary font-semibold"></span>
+                                <span>Max: 100</span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="low_stock_alert_enabled" x-bind:value="lowStockAlertEnabled ? '1' : '0'">
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant/20 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'edit-product')"
+                    class="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface font-medium">
+                    Batal
+                </button>
+                <button type="submit" :disabled="submitting"
+                    class="btn-primary-animate px-5 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm flex items-center gap-2 shadow-md shadow-primary/20 hover:shadow-lg transition-all disabled:opacity-50">
+                    <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL'1;">save</span>
+                    Simpan Perubahan
+                </button>
+            </div>
+
         </div>
     </form>
 </x-modal>

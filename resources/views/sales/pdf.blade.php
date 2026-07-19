@@ -28,9 +28,10 @@
         <h1>NNQUA</h1>
         <h2>Laporan Penjualan</h2>
         <p>Dicetak: {{ now()->isoFormat('D MMMM YYYY, HH:mm') }}</p>
-        @if($status || $from || $to || $search)
+        @if($period || $status || $from || $to || $search)
             <p>
                 Filter:
+                @if($period) Periode: {{ ucfirst($period) }} @endif
                 @if($search) Pencarian: "{{ $search }}" @endif
                 @if($status) Status: {{ ucfirst($status) }} @endif
                 @if($from) Dari: {{ \Carbon\Carbon::parse($from)->isoFormat('D MMM YYYY') }} @endif

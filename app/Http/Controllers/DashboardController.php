@@ -17,7 +17,17 @@ class DashboardController extends Controller
     $totalCustomers = Customer::count();
     $totalProducts = Product::count();
     $totalSales = Sale::count();
-    $totalIncome = Sale::where('payment_status', 'lunas')->sum('total_price');
+    $lunasIncome = Sale::where('payment_status', 'lunas')
+        ->whereMonth('sales_date', now()->month)
+        ->whereYear('sales_date', now()->year)
+        ->sum('total_price');
+
+    $cicilIncome = Sale::where('payment_status', 'cicil')
+        ->whereMonth('sales_date', now()->month)
+        ->whereYear('sales_date', now()->year)
+        ->sum('paid_amount');
+
+    $totalIncome = $lunasIncome + $cicilIncome;
 
     $totalExpense = Expense::whereMonth('expense_date', now()->month)
         ->whereYear('expense_date', now()->year)
@@ -34,7 +44,7 @@ class DashboardController extends Controller
 
    $salesChart = Sale::select(
         DB::raw('DATE(sales_date) as date'),
-        DB::raw("SUM(CASE WHEN payment_status = 'lunas' THEN total_price ELSE 0 END) as total")
+        DB::raw("SUM(CASE WHEN payment_status = 'lunas' THEN total_price WHEN payment_status = 'cicil' THEN paid_amount ELSE 0 END) as total")
     )
     ->groupBy('date')
     ->orderBy('date')
@@ -58,6 +68,14 @@ class DashboardController extends Controller
 
     $criticalStock = Product::where('stock', '<=', 10)->count();
 
+    $stockHabis = Product::where('stock', '<=', 0)->count();
+    $stockKritis = Product::where('stock', '>', 0)->where('stock', '<', 10)->count();
+    $stockMenipis = Product::where('low_stock_alert_enabled', true)
+        ->where('stock', '>=', 10)
+        ->whereColumn('stock', '<=', 'low_stock_threshold')
+        ->count();
+    $stockAman = Product::count() - $stockHabis - $stockKritis - $stockMenipis;
+
     $topDebtors = Sale::select('customer_id',
             DB::raw('COUNT(*) as total_transaksi'),
             DB::raw('SUM(total_price - COALESCE(paid_amount, 0)) as sisa_utang')
@@ -71,8 +89,8 @@ class DashboardController extends Controller
 
     $latestExpenses = Expense::latest('expense_date')->take(5)->get();
 
-    $customers = Customer::orderBy('name')->get(['id', 'name']);
-    $products = Product::orderBy('name')->get();
+        $customers = Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $products = Product::where('is_active', true)->orderBy('name')->get();
 
         return view('dashboard', compact(
         'totalCustomers',
@@ -85,6 +103,10 @@ class DashboardController extends Controller
         'salesChart',
         'expenseChart',
         'criticalStock',
+        'stockHabis',
+        'stockKritis',
+        'stockMenipis',
+        'stockAman',
         'topDebtors',
         'latestExpenses',
         'customers',

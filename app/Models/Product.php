@@ -11,7 +11,10 @@ class Product extends Model
         'name',
         'category',
         'stock',
-        'price'
+        'price',
+        'low_stock_threshold',
+        'low_stock_alert_enabled',
+        'is_active',
     ];
 
     public function saleItems(): HasMany

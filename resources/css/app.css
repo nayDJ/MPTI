@@ -2,58 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-.floating-group {
+.form-control {
     position: relative;
+    margin: 20px 0 40px;
 }
 
-.floating-input {
+.form-control input {
+    background-color: transparent;
+    border: 0;
+    border-bottom: 2px solid #bfc8cd;
     display: block;
     width: 100%;
-    border: none;
-    border-bottom: 1px solid rgba(255,255,255,0.3);
-    border-radius: 0;
-    padding: 1.75rem 1.25rem 0.5rem;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
-    outline: none;
-    transition: border-bottom-color 0.2s;
-    background: transparent;
-    color: rgba(255,255,255,0.9);
+    padding: 15px 0;
+    font-size: 18px;
+    color: #181c1e;
 }
 
-.floating-input:focus {
-    border-bottom-color: white;
-    border-bottom-width: 2px;
-    outline: none;
+.form-control input:focus,
+.form-control input:not(:placeholder-shown) {
+    outline: 0;
     box-shadow: none;
+    border-bottom-color: #0f6e8c;
 }
 
-.floating-input:-webkit-autofill,
-.floating-input:-webkit-autofill:hover,
-.floating-input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px transparent inset;
-    -webkit-text-fill-color: rgba(255,255,255,0.9);
-    transition: background-color 5000s ease-in-out 0s;
-}
-
-.floating-label {
+.form-control label {
     position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.875rem;
-    color: white;
-    transition: all 0.2s ease;
+    top: 15px;
+    left: 0;
     pointer-events: none;
-    background: transparent;
-    padding: 0 4px;
 }
 
-.floating-input:focus ~ .floating-label,
-.floating-input:not(:placeholder-shown) ~ .floating-label {
-    top: -0.625rem;
-    transform: translateY(0) scale(0.85);
+.form-control label span {
+    display: inline-block;
+    position: relative;
+    top: 0;
+    font-size: 18px;
+    min-width: 5px;
+    color: #767170;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.form-control input:focus + label span,
+.form-control input:not(:placeholder-shown) + label span {
+    color: #0f6e8c;
+    top: -30px;
+}
+
+.btn-slide-hover {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 48px;
+    background: #0f6e8c;
     color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-slide-hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: #004d64;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+}
+
+.btn-slide-hover:hover::after {
+    left: 0;
+}
+
+.btn-slide-hover span {
+    position: relative;
+    z-index: 10;
 }
 
 .btn-animated {
@@ -106,54 +138,8 @@
     transform: translateX(-4px);
 }
 
-.btn-animated-outline {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px 40px;
-    background: white;
-    color: #0F6E8C;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    position: relative;
-    z-index: 1;
-    overflow: hidden;
-    transition: border-color 0.3s ease;
-}
-
-.btn-animated-outline::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    height: 100%;
-    background: #0F6E8C;
-    border-radius: 0;
-    transition: right 0.4s ease;
-    z-index: -1;
-}
-
-.btn-animated-outline:hover::before {
-    right: 0;
-}
-
-.btn-animated-outline:hover {
-    color: white;
-    border-color: #0F6E8C;
-}
-
-.btn-animated-outline .icon {
-    display: inline-flex;
-    transition: transform 0.3s ease;
-}
-
-.btn-animated-outline:hover .icon {
-    transform: translateX(-4px);
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
 .btn-pdf {
@@ -161,8 +147,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 18px;
-    background: #059669;
+    padding: 6px 18px;
+    background: #0F6E8C;
     color: white;
     border: 2px solid transparent;
     border-radius: 8px;
@@ -193,7 +179,7 @@
 }
 
 .btn-pdf:hover {
-    border-color: #059669;
+    border-color: #0F6E8C;
     color: black;
 }
 
@@ -219,6 +205,49 @@
 .btn-pdf:hover .icon {
     opacity: 1;
     transform: scale(1);
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary-animate {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    transition: color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary-animate::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: #0f6e8c;
+    transition: left 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: -1;
+}
+
+.btn-primary-animate:hover::before {
+    left: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #bfc8cd;
+    border-radius: 10px;
 }
 
 

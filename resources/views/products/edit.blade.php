@@ -5,18 +5,6 @@
 
     <div class="max-w-3xl mx-auto">
 
-        @if(session('success'))
-            <div class="mb-6 bg-green-100 text-green-700 p-4 rounded-xl">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="mb-6 bg-red-100 text-red-600 p-4 rounded-xl">
-                {{ session('error') }}
-            </div>
-        @endif
-
         <nav class="text-sm text-slate-400 mb-4">
             <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
             <span class="mx-1">›</span>

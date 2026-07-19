@@ -1,4 +1,5 @@
-@section('title', 'Data Customer')
+@section('title', 'Data Pelanggan')
+@section('topbar-title', 'Data Pelanggan')
 <x-app-layout>
 
 <div class="min-h-screen bg-[#F3F6F8] p-8" x-data="{
@@ -26,323 +27,423 @@
     }
 }">
 
-    @if(session('success'))
-        <div class="mb-6 bg-green-100 text-green-700 p-4 rounded-xl">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="mb-6 bg-red-100 text-red-600 p-4 rounded-xl">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    {{-- Header --}}
-    <div class="flex justify-between items-center mb-8">
-
-        <div>
-
-            <nav class="text-sm text-slate-400 mb-1">
-                <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
-                <span class="mx-1">›</span>
-                <span class="text-slate-600">Data Customer</span>
-            </nav>
-
-            <h1 class="text-3xl font-bold text-[#0F6E8C]">
-                Data Customer
-            </h1>
-
-            <p class="text-gray-500 mt-1">
-                Kelola seluruh pelanggan NNQUA
-            </p>
-
-        </div>
-
-        <button
-            @click="$dispatch('open-modal', 'add-customer')"
-            class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-3 rounded-xl shadow-sm transition">
-
-            + Tambah Customer
-
-        </button>
-
+{{-- Header --}}
+<div class="flex justify-between items-start mb-8">
+    <div>
+        <nav class="text-sm text-slate-400 mb-1">
+            <a href="{{ route('dashboard') }}" class="hover:text-[#0F6E8C] transition">Dashboard</a>
+            <span class="material-symbols-outlined text-[16px] align-middle mx-1">chevron_right</span>
+            <span class="text-slate-600">Data Pelanggan</span>
+        </nav>
+        <h1 class="text-3xl font-bold text-[#0F6E8C]">
+            Data Pelanggan
+        </h1>
+        <p class="text-gray-500 mt-1">
+            Kelola seluruh pelanggan NNQUA
+        </p>
     </div>
+    <button @click="$dispatch('open-modal', 'add-customer')"
+        class="bg-primary hover:bg-primary-container text-white px-5 py-3 rounded-xl shadow-sm transition whitespace-nowrap inline-flex items-center gap-2">
+        <span class="material-symbols-outlined">add</span>
+        Tambah Pelanggan
+    </button>
+</div>
 
-    {{-- Statistik --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-
-            <p class="text-sm text-gray-500">
-                Total Customer
-            </p>
-
-            <h2 class="text-3xl font-bold text-slate-800 mt-3">
-                {{ $totalCustomers }}
-            </h2>
-
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-
-            <p class="text-sm text-gray-500">
-                Customer Baru Hari Ini
-            </p>
-
-            <h2 class="text-3xl font-bold text-green-600 mt-3">
-                {{ $newCustomers }}
-            </h2>
-
-        </div>
-
+{{-- Stats --}}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
+        <span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg self-start">group</span>
+        <p class="text-sm text-on-surface-variant">Total Pelanggan</p>
+        <p class="text-3xl font-bold text-on-surface">{{ number_format($totalCustomers) }}</p>
     </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
+        <span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg self-start">receipt_long</span>
+        <p class="text-sm text-on-surface-variant">Total Transaksi</p>
+        <p class="text-3xl font-bold text-on-surface">{{ number_format($totalTransactions) }}</p>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
+        <span class="material-symbols-outlined text-secondary bg-secondary-fixed p-2 rounded-lg self-start">person_add</span>
+        <p class="text-sm text-on-surface-variant">Pelanggan Baru Hari Ini</p>
+        <p class="text-3xl font-bold text-green-600">{{ $newCustomers }}</p>
+    </div>
+    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
+        <span class="material-symbols-outlined text-error bg-error-container p-2 rounded-lg self-start">credit_score</span>
+        <p class="text-sm text-on-surface-variant">Piutang Pelanggan</p>
+        <p class="text-3xl font-bold text-red-500">{{ number_format($debtorCount) }}</p>
+    </div>
+</div>
 
-    {{-- Table --}}
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+{{-- Table --}}
+<div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
 
-        <div class="p-6 border-b flex items-center justify-between gap-4">
+    <div class="p-5 border-b border-outline-variant/20">
 
-            <h2 class="text-xl font-bold text-slate-800">
-                Daftar Customer
-            </h2>
+        <form method="GET" action="{{ route('customers.index') }}" class="flex flex-col md:flex-row justify-between items-center gap-4">
 
-            <form method="GET" action="{{ route('customers.index') }}" class="flex gap-2">
+            <div class="relative w-full md:w-96">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
                 <input type="text" name="search" value="{{ $search ?? '' }}"
-                    placeholder="Cari nama atau no HP..."
-                    class="border border-gray-300 rounded-lg px-4 py-2 text-sm w-64">
-                <button type="submit"
-                    class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-4 py-2 rounded-lg text-sm transition">
-                    Cari
-                </button>
-                @if($search)
+                    placeholder="Cari nama, No. Telepon atau alamat..."
+                    class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-sm focus:ring-2 focus:ring-primary/20 outline-none">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div class="relative" x-data="{ showFilter: false }">
+                    <button type="button" @click="showFilter = !showFilter"
+                        class="flex items-center gap-1 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition text-sm">
+                        <span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        Akun
+                        <span x-show="'{{ request('is_active', '') }}' !== ''" x-cloak class="w-2 h-2 rounded-full bg-primary"></span>
+                    </button>
+                    <div x-show="showFilter" @click.outside="showFilter = false" x-cloak
+                        class="absolute right-0 mt-2 w-40 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-lg z-20 overflow-hidden py-1">
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['is_active' => ''])) }}"
+                            @click="showFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('is_active', '') === '' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('is_active', '') }}' === ''" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span>Semua</span>
+                        </a>
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['is_active' => '1'])) }}"
+                            @click="showFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('is_active') === '1' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('is_active') }}' === '1'" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span>Aktif</span>
+                        </a>
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['is_active' => '0'])) }}"
+                            @click="showFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('is_active') === '0' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('is_active') }}' === '0'" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span>Nonaktif</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="relative" x-data="{ showDebtFilter: false }">
+                    <button type="button" @click="showDebtFilter = !showDebtFilter"
+                        class="flex items-center gap-1 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition text-sm">
+                        <span class="material-symbols-outlined text-[18px]">payments</span>
+                        Status
+                        <span x-show="'{{ request('debt_status', '') }}' !== ''" x-cloak class="w-2 h-2 rounded-full bg-primary"></span>
+                    </button>
+                    <div x-show="showDebtFilter" @click.outside="showDebtFilter = false" x-cloak
+                        class="absolute right-0 mt-2 w-40 bg-surface-container-lowest rounded-xl border border-outline-variant shadow-lg z-20 overflow-hidden py-1">
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['debt_status' => ''])) }}"
+                            @click="showDebtFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('debt_status', '') === '' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('debt_status', '') }}' === ''" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span>Semua</span>
+                        </a>
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['debt_status' => 'lunas'])) }}"
+                            @click="showDebtFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('debt_status') === 'lunas' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('debt_status') }}' === 'lunas'" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-1"></span> Lunas
+                        </a>
+                        <a href="{{ route('customers.index', array_merge(request()->query(), ['debt_status' => 'hutang'])) }}"
+                            @click="showDebtFilter = false"
+                            class="block w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-surface-container-high transition-colors
+                                {{ request('debt_status') === 'hutang' ? 'bg-primary/10 text-primary font-semibold' : 'text-on-surface' }}">
+                            <span x-show="'{{ request('debt_status') }}' === 'hutang'" class="material-symbols-outlined text-primary text-base">check</span>
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block mr-1"></span> Hutang
+                        </a>
+                    </div>
+                </div>
+                <a href="{{ route('customers.export.pdf', request()->only(['search', 'is_active', 'debt_status'])) }}"
+                   class="btn-pdf inline-flex items-center gap-2">
+                    <span class="text">PDF</span>
+                    <span class="icon material-symbols-outlined">picture_as_pdf</span>
+                </a>
+                @if($search || request('is_active', '') !== '' || request('debt_status', '') !== '')
                     <a href="{{ route('customers.index') }}"
-                        class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
+                        class="flex items-center gap-1 px-3 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high transition text-sm">
+                        <span class="material-symbols-outlined text-[18px]">refresh</span>
                         Reset
                     </a>
                 @endif
-            </form>
+            </div>
+            <input type="hidden" name="is_active" value="{{ request('is_active', '') }}">
+            <input type="hidden" name="debt_status" value="{{ request('debt_status', '') }}">
+        </form>
 
-        </div>
+    </div>
 
         <div class="overflow-x-auto">
-
-            <table class="w-full">
-
-                <thead>
-
-                    <tr class="bg-slate-50 border-b">
-
-                        <th class="p-4 text-left">
-                            Nama
-                        </th>
-
-                        <th class="p-4 text-left">
-                            No HP
-                        </th>
-
-                        <th class="p-4 text-left">
-                            Alamat
-                        </th>
-
-                        <th class="p-4 text-center">
-                            Aksi
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-                    @forelse($customers as $customer)
-
-                        <tr class="border-b hover:bg-slate-50">
-
-                            <td class="p-4 font-medium">
-                                {{ $customer->name }}
-                            </td>
-
-                            <td class="p-4">
-                                {{ $customer->phone }}
-                            </td>
-
-                            <td class="p-4 text-gray-600">
-                                {{ $customer->address }}
-                            </td>
-
-                            <td class="p-4">
-
-                                <div class="flex items-center justify-center gap-2">
-
-                                    <a href="{{ route('customers.show', $customer->id) }}"
-                                       title="Lihat"
-                                       class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition relative group">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                        </svg>
-                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">Lihat</span>
-                                    </a>
-
-                                    <button
-                                        @click="openEdit({{ json_encode($customer->id) }}, {{ json_encode($customer->name) }}, {{ json_encode($customer->phone) }}, {{ json_encode($customer->address) }})"
-                                        title="Edit"
-                                        class="bg-gray-400 hover:bg-gray-500 text-white p-2 rounded-lg transition relative group">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                                        </svg>
-                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">Edit</span>
-                                    </button>
-
-                                    <button
-                                        @click="confirmDelete('/customers/' + {{ $customer->id }})"
-                                        title="Hapus"
-                                        class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition relative group">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        <span class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">Hapus</span>
-                                    </button>
-
+        <table class="w-full">
+            <thead>
+                <tr class="bg-surface-container-low/50">
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Nama Pelanggan</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">No. Telepon</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Alamat</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Total Transaksi</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Status</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-left">Status Pelanggan</th>
+                    <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($customers as $customer)
+                    @php
+                        $initial = strtoupper(substr($customer->name, 0, 1));
+                        $colors = ['bg-primary/10 text-primary', 'bg-secondary/10 text-secondary', 'bg-tertiary/10 text-tertiary', 'bg-error/10 text-error'];
+                        $color = $colors[crc32($customer->id) % 4];
+                        $hasDebt = ($customer->total_purchase ?? 0) > ($customer->total_paid ?? 0);
+                    @endphp
+                    <tr class="border-b border-outline-variant/20 hover:bg-primary-container/5 transition-colors group">
+                        <td class="px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full {{ $color }} flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                    {{ $initial }}
                                 </div>
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
-                        <tr>
-
-                            <td colspan="4"
-                                class="text-center py-16 text-gray-500">
-
-                                <svg class="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-
-                                <p class="text-lg font-medium text-gray-400 mb-2">
-                                    Belum ada data customer
-                                </p>
-
-                                <p class="text-sm text-gray-400 mb-6">
-                                    Tambah pelanggan pertama untuk memulai
-                                </p>
-
+                                <div>
+                                    <p class="font-semibold text-on-surface group-hover:text-primary transition-colors">{{ $customer->name }}</p>
+                                    <p class="text-xs text-on-surface-variant">#CUST-{{ str_pad($customer->id, 4, '0', STR_PAD_LEFT) }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-on-surface-variant">{{ $customer->phone ?: '-' }}</td>
+                        <td class="px-4 py-3 text-sm text-on-surface-variant max-w-[200px] truncate">{{ $customer->address ?: '-' }}</td>
+                        <td class="px-4 py-3 font-label-numeric text-label-numeric text-on-surface">Rp {{ number_format($customer->total_purchase ?? 0) }}</td>
+                        <td class="px-4 py-3">
+                            @if($hasDebt)
+                                <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-semibold">Hutang</span>
+                            @else
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Aktif</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            @if($customer->is_active)
+                                <span class="text-green-600 font-semibold">Aktif</span>
+                            @else
+                                <span class="text-red-500 font-semibold">Nonaktif</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{{ route('customers.show', $customer->id) }}"
+                                    title="Lihat"
+                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </a>
                                 <button
-                                    @click="$dispatch('open-modal', 'add-customer')"
-                                    class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2.5 rounded-lg text-sm font-medium transition inline-flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
-                                    </svg>
-                                    Tambah Customer
+                                    @click="openEdit({{ json_encode($customer->id) }}, {{ json_encode($customer->name) }}, {{ json_encode($customer->phone) }}, {{ json_encode($customer->address) }})"
+                                    title="Edit"
+                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined">edit</span>
                                 </button>
+                                <form method="POST" action="{{ route('customers.toggle-status', $customer) }}" class="inline">
+                                    @csrf
+                                    <button type="submit"
+                                        title="{{ $customer->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"
+                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                        <span class="material-symbols-outlined">{{ $customer->is_active ? 'toggle_on' : 'toggle_off' }}</span>
+                                    </button>
+                                </form>
+                                <button
+                                    @click="confirmDelete('/customers/' + {{ $customer->id }})"
+                                    title="Hapus"
+                                    class="p-1.5 text-on-surface-variant hover:text-error hover:bg-error-container/10 rounded-lg transition-colors">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center py-16 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-6xl text-outline mb-4 inline-block">group</span>
+                            <p class="text-lg font-medium text-on-surface-variant mb-2">Belum ada data pelanggan</p>
+                            <p class="text-sm text-on-surface-variant mb-6">Tambah pelanggan pertama untuk memulai</p>
+                            <button
+                                @click="$dispatch('open-modal', 'add-customer')"
+                                class="bg-primary hover:bg-primary-container text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 shadow-sm">
+                                <span class="material-symbols-outlined text-base">add</span>
+                                Tambah Pelanggan
+                            </button>
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-                            </td>
-
-                        </tr>
-
-                    @endforelse
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        <div class="p-4 border-t">
-            {{ $customers->links() }}
-        </div>
-
+    <div class="p-4 border-t border-outline-variant/20">
+        {{ $customers->links() }}
     </div>
 
 </div>
 
-<x-modal name="add-customer" :show="$errors->any() && old('_form_type') === 'add'" focusable>
-    <form action="{{ route('customers.store') }}" method="POST" class="p-6" @submit="submitting = true">
+</div>
+
+<x-modal name="add-customer" :show="$errors->any() && old('_form_type') === 'add'" maxWidth="lg" focusable>
+    <form action="{{ route('customers.store') }}" method="POST" @submit="submitting = true">
         @csrf
         <input type="hidden" name="_form_type" value="add">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">Tambah Customer</h2>
 
-        <div class="space-y-4">
-            <div>
-                <x-input-label for="name" value="Nama Customer" />
-                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('name')" />
-            </div>
-            <div>
-                <x-input-label for="phone" value="No HP" />
-                <x-text-input id="phone" name="phone" type="tel" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('phone')" />
-            </div>
-            <div>
-                <x-input-label for="address" value="Alamat" />
-                <textarea id="address" name="address"
-                    class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 block w-full"
-                    rows="3" required></textarea>
-                <x-input-error :messages="$errors->get('address')" />
-            </div>
-        </div>
+        <div class="glass-panel rounded-xl shadow-xl flex flex-col">
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button
-                type="button"
-                @click="$dispatch('close-modal', 'add-customer')"
-                class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-                Batal
-            </button>
-            <button
-                type="submit"
-                :disabled="submitting"
-                class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Simpan
-            </button>
+            <div class="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">person</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-on-surface">Tambah Pelanggan</h2>
+                        <p class="text-sm text-on-surface-variant">Tambahkan pelanggan baru ke sistem.</p>
+                    </div>
+                </div>
+                <button type="button" @click="$dispatch('close-modal', 'add-customer')"
+                    class="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant flex items-center justify-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            @if($errors->any() && old('_form_type') === 'add')
+                <div class="mx-6 mt-4 bg-error-container text-on-error-container p-3 rounded-lg text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Nama Pelanggan</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">person</span>
+                        <input type="text" name="name" value="{{ old('name') }}"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                            placeholder="Masukkan nama..." required>
+                    </div>
+                    <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">No HP (opsional)</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">phone</span>
+                        <input type="tel" name="phone" value="{{ old('phone') }}"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                            placeholder="08xxxxxxxxxx">
+                    </div>
+                    <x-input-error :messages="$errors->get('phone')" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Alamat (opsional)</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3 text-outline text-lg">location_on</span>
+                        <textarea name="address" rows="3"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm resize-none"
+                            placeholder="Masukkan alamat...">{{ old('address') }}</textarea>
+                    </div>
+                    <x-input-error :messages="$errors->get('address')" class="mt-1" />
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant/20 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'add-customer')"
+                    class="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface font-medium">
+                    Batal
+                </button>
+                <button type="submit" :disabled="submitting"
+                    class="btn-primary-animate px-5 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm flex items-center gap-2 shadow-md shadow-primary/20 hover:shadow-lg transition-all disabled:opacity-50">
+                    <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL'1;">save</span>
+                    Simpan Pelanggan
+                </button>
+            </div>
+
         </div>
     </form>
 </x-modal>
 
-<x-modal name="edit-customer" :show="$errors->any() && old('_form_type') === 'edit'" focusable>
-    <form id="edit-customer-form" method="POST" class="p-6" @submit="submitting = true">
+<x-modal name="edit-customer" :show="$errors->any() && old('_form_type') === 'edit'" maxWidth="lg" focusable>
+    <form id="edit-customer-form" method="POST" @submit="submitting = true">
         @csrf
         @method('PUT')
         <input type="hidden" name="_form_type" value="edit">
         <input type="hidden" name="_edit_id" id="edit-customer-id">
-        <h2 class="text-lg font-bold text-slate-800 mb-4">Edit Customer</h2>
 
-        <div class="space-y-4">
-            <div>
-                <x-input-label for="edit-name" value="Nama Customer" />
-                <x-text-input id="edit-name" name="name" type="text" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('name')" />
-            </div>
-            <div>
-                <x-input-label for="edit-phone" value="No HP" />
-                <x-text-input id="edit-phone" name="phone" type="tel" class="mt-1 block w-full" required />
-                <x-input-error :messages="$errors->get('phone')" />
-            </div>
-            <div>
-                <x-input-label for="edit-address" value="Alamat" />
-                <textarea id="edit-address" name="address"
-                    class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm mt-1 block w-full"
-                    rows="3" required></textarea>
-                <x-input-error :messages="$errors->get('address')" />
-            </div>
-        </div>
+        <div class="glass-panel rounded-xl shadow-xl flex flex-col">
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button
-                type="button"
-                @click="$dispatch('close-modal', 'edit-customer')"
-                class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">
-                Batal
-            </button>
-            <button
-                type="submit"
-                :disabled="submitting"
-                class="bg-[#0F6E8C] hover:bg-[#0b5b74] text-white px-5 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Simpan
-            </button>
+            <div class="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between bg-surface-container-lowest">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined" style="font-variation-settings:'FILL'1;">person</span>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-on-surface">Edit Pelanggan</h2>
+                        <p class="text-sm text-on-surface-variant">Edit data pelanggan di sistem.</p>
+                    </div>
+                </div>
+                <button type="button" @click="$dispatch('close-modal', 'edit-customer')"
+                    class="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant flex items-center justify-center">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            @if($errors->any() && old('_form_type') === 'edit')
+                <div class="mx-6 mt-4 bg-error-container text-on-error-container p-3 rounded-lg text-sm">
+                    <ul class="list-disc list-inside">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Nama Pelanggan</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">person</span>
+                        <input type="text" id="edit-name" name="name"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                            placeholder="Masukkan nama..." required>
+                    </div>
+                    <x-input-error :messages="$errors->get('name')" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">No HP (opsional)</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">phone</span>
+                        <input type="tel" id="edit-phone" name="phone"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
+                            placeholder="08xxxxxxxxxx">
+                    </div>
+                    <x-input-error :messages="$errors->get('phone')" class="mt-1" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Alamat (opsional)</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3 text-outline text-lg">location_on</span>
+                        <textarea id="edit-address" name="address" rows="3"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm resize-none"
+                            placeholder="Masukkan alamat..."></textarea>
+                    </div>
+                    <x-input-error :messages="$errors->get('address')" class="mt-1" />
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant/20 flex justify-end gap-3">
+                <button type="button" @click="$dispatch('close-modal', 'edit-customer')"
+                    class="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface font-medium">
+                    Batal
+                </button>
+                <button type="submit" :disabled="submitting"
+                    class="btn-primary-animate px-5 py-2.5 bg-primary text-white rounded-xl font-semibold text-sm flex items-center gap-2 shadow-md shadow-primary/20 hover:shadow-lg transition-all disabled:opacity-50">
+                    <span class="material-symbols-outlined text-base" style="font-variation-settings:'FILL'1;">save</span>
+                    Simpan Pelanggan
+                </button>
+            </div>
+
         </div>
     </form>
 </x-modal>
@@ -352,9 +453,7 @@
         @csrf
         @method('DELETE')
         <div class="text-center">
-            <svg class="mx-auto h-14 w-14 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-            </svg>
+            <span class="material-symbols-outlined text-error text-5xl mb-4">warning</span>
             <h2 class="text-lg font-bold text-slate-800 mb-2">Hapus Customer</h2>
             <p class="text-sm text-gray-500 mb-6">Yakin ingin menghapus customer ini? Tindakan ini tidak bisa dibatalkan.</p>
         </div>

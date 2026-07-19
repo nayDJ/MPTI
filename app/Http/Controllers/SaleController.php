@@ -6,6 +6,7 @@ use App\Models\Sale;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Models\SaleItem;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -53,16 +54,47 @@ class SaleController extends Controller
             $query->whereDate('sales_date', '<=', $to);
         }
 
-        $sales = $query->latest()->paginate(15)->withQueryString();
+        $sales = $query->latest()->paginate(10)->withQueryString();
 
-        $totalSales = Sale::count();
-        $totalRevenue = Sale::selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")->value('total') ?? 0;
-        $totalDebt = Sale::selectRaw("SUM(CASE WHEN payment_status = 'belum' THEN total_price WHEN payment_status = 'cicil' THEN total_price - paid_amount ELSE 0 END) as total")->value('total') ?? 0;
+        $statQuery = Sale::query()
+            ->when($from, fn($q) => $q->whereDate('sales_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('sales_date', '<=', $to));
+
+        $totalSales = (clone $statQuery)->count();
+        $totalRevenue = (clone $statQuery)
+            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->value('total') ?? 0;
+        $totalDebt = (clone $statQuery)
+            ->selectRaw("SUM(CASE WHEN payment_status = 'belum' THEN total_price WHEN payment_status = 'cicil' THEN total_price - paid_amount ELSE 0 END) as total")
+            ->value('total') ?? 0;
 
         $todaySales = Sale::whereDate('sales_date', now()->toDateString())->count();
 
-        $customers = Customer::all();
-        $products = Product::all();
+        $debtorCount = (clone $statQuery)
+            ->where(function ($q) {
+                $q->where('payment_status', 'belum')
+                  ->orWhere(function ($q2) {
+                      $q2->where('payment_status', 'cicil')
+                         ->whereRaw('paid_amount < total_price');
+                  });
+            })->count();
+
+        $currentMonthRevenue = Sale::whereMonth('sales_date', now()->month)
+            ->whereYear('sales_date', now()->year)
+            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->value('total') ?? 0;
+
+        $lastMonthRevenue = Sale::whereMonth('sales_date', now()->subMonth()->month)
+            ->whereYear('sales_date', now()->subMonth()->year)
+            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->value('total') ?? 0;
+
+        $revenueGrowth = $lastMonthRevenue > 0
+            ? round(($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue * 100)
+            : 0;
+
+        $customers = Customer::where('is_active', true)->get();
+        $products = Product::where('is_active', true)->get();
 
         return view('sales.index', compact(
             'sales',
@@ -70,6 +102,8 @@ class SaleController extends Controller
             'totalRevenue',
             'totalDebt',
             'todaySales',
+            'debtorCount',
+            'revenueGrowth',
             'customers',
             'products',
             'search',
@@ -93,18 +127,39 @@ class SaleController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
+        $rules = [
+            'customer_id' => 'required',
             'sales_date'  => 'required|date',
             'items'       => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity'   => 'required|integer|min:1',
             'payment_status' => 'required|in:belum,lunas,cicil',
             'paid_amount' => 'nullable|numeric|min:0',
-        ]);
+        ];
+
+        if ($request->customer_id === 'NEW') {
+            $rules['new_customer_name'] = 'required|string|max:255';
+            $rules['new_customer_phone'] = 'nullable|string|max:20';
+            $rules['new_customer_address'] = 'nullable|string';
+        } else {
+            $rules['customer_id'] = 'required|exists:customers,id';
+        }
+
+        $request->validate($rules);
 
         DB::beginTransaction();
         try {
+            if ($request->customer_id === 'NEW') {
+                $customer = Customer::create([
+                    'name' => $request->new_customer_name,
+                    'phone' => $request->new_customer_phone ?? '',
+                    'address' => $request->new_customer_address ?? '',
+                ]);
+                $customerId = $customer->id;
+            } else {
+                $customerId = $request->customer_id;
+            }
+
             $total = 0;
             $itemsData = [];
 
@@ -135,7 +190,7 @@ class SaleController extends Controller
                 : ($request->paid_amount ?? 0));
 
             $sale = Sale::create([
-                'customer_id' => $request->customer_id,
+                'customer_id' => $customerId,
                 'total_price' => $total,
                 'sales_date' => $request->sales_date,
                 'payment_status' => $request->payment_status,
@@ -147,6 +202,17 @@ class SaleController extends Controller
             }
 
             DB::commit();
+
+            $customerName = $sale->customer->name ?? 'Pelanggan';
+
+            Notification::create([
+                'type' => 'success',
+                'title' => 'Penjualan Baru',
+                'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' an. ' . $customerName . ' — Rp ' . number_format($sale->total_price),
+                'action_type' => 'sale.create',
+                'notifiable_id' => $sale->id,
+                'notifiable_type' => Sale::class,
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Transaksi gagal, silakan coba lagi');
@@ -224,7 +290,7 @@ class SaleController extends Controller
                 : ($sale->payment_status === 'cicil' ? ($sale->paid_amount ?? 0) : 0);
         });
 
-        $pdf = Pdf::loadView('sales.pdf', compact('sales', 'totalRevenue', 'search', 'status', 'from', 'to'));
+        $pdf = Pdf::loadView('sales.pdf', compact('sales', 'totalRevenue', 'search', 'status', 'from', 'to', 'period'));
 
         return $pdf->download('laporan-penjualan.pdf');
     }
@@ -267,6 +333,15 @@ class SaleController extends Controller
             'paid_amount' => $data['paid_amount'],
         ]);
 
+        Notification::create([
+            'type' => 'info',
+            'title' => 'Status Bayar Diubah',
+            'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' → ' . $data['payment_status'],
+            'action_type' => 'sale.update',
+            'notifiable_id' => $sale->id,
+            'notifiable_type' => Sale::class,
+        ]);
+
         return redirect()
             ->route('sales.index')
             ->with('success', 'Status pembayaran berhasil diperbarui');
@@ -277,8 +352,16 @@ class SaleController extends Controller
      */
     public function destroy(Sale $sale)
     {
+        $id = $sale->id;
         $sale->items()->delete();
         $sale->delete();
+
+        Notification::create([
+            'type' => 'error',
+            'title' => 'Penjualan Dihapus',
+            'message' => '#NQ-' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' berhasil dihapus',
+            'action_type' => 'sale.delete',
+        ]);
 
         return redirect()
             ->route('sales.index')

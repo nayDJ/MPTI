@@ -1,0 +1,21 @@
+<svg width="340" height="260" viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Logo tetesan air nnqua</title>
+<desc>Ikon tetesan air dengan gradien biru kehijauan halus dan kilau lembut, tanpa teks atau huruf</desc>
+<defs>
+<linearGradient id="smoothGrad2" x1="15%" y1="0%" x2="85%" y2="100%">
+<stop offset="0%" stop-color="#63A1B4"/>
+<stop offset="50%" stop-color="#0F6E8C"/>
+<stop offset="100%" stop-color="#0B4D62"/>
+</linearGradient>
+<clipPath id="dropClip6">
+<path d="M340,40 C340,40 396,107.2 396,149.2 C396,181.4 370.8,205.2 340,205.2 C309.2,205.2 284,181.4 284,149.2 C284,107.2 340,40 340,40 Z"/>
+</clipPath>
+</defs>
+
+<path d="M340,40 C340,40 396,107.2 396,149.2 C396,181.4 370.8,205.2 340,205.2 C309.2,205.2 284,181.4 284,149.2 C284,107.2 340,40 340,40 Z" fill="url(#smoothGrad2)"/>
+
+<g clip-path="url(#dropClip6)">
+<ellipse cx="318" cy="95" rx="24" ry="34" fill="#ffffff" opacity="0.25"/>
+<ellipse cx="313" cy="88" rx="9" ry="13" fill="#ffffff" opacity="0.35"/>
+</g>
+</svg>
