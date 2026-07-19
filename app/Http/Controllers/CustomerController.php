@@ -116,7 +116,7 @@ class CustomerController extends Controller
         Notification::create([
             'type' => 'success',
             'title' => 'Pelanggan Baru',
-            'message' => $customer->name . ' — ' . ($customer->phone ?: '-'),
+            'message' => $customer->name . ' — ' . ($customer->phone ?: '-') . ' oleh ' . auth()->user()->name,
             'action_type' => 'customer.create',
             'notifiable_id' => $customer->id,
             'notifiable_type' => Customer::class,
@@ -148,7 +148,7 @@ class CustomerController extends Controller
         Notification::create([
             'type' => 'info',
             'title' => 'Pelanggan Diupdate',
-            'message' => $customer->name . ' berhasil diperbarui',
+            'message' => $customer->name . ' berhasil diperbarui oleh ' . auth()->user()->name,
             'action_type' => 'customer.update',
             'notifiable_id' => $customer->id,
             'notifiable_type' => Customer::class,
@@ -167,7 +167,7 @@ class CustomerController extends Controller
         Notification::create([
             'type' => 'error',
             'title' => 'Pelanggan Dihapus',
-            'message' => $name . ' berhasil dihapus',
+            'message' => $name . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'customer.delete',
         ]);
 
@@ -200,7 +200,7 @@ class CustomerController extends Controller
         Notification::create([
             'type' => 'info',
             'title' => 'Status Pelanggan',
-            'message' => $customer->name . ' ' . ($customer->is_active ? 'diaktifkan' : 'dinonaktifkan'),
+            'message' => $customer->name . ' ' . ($customer->is_active ? 'diaktifkan' : 'dinonaktifkan') . ' oleh ' . auth()->user()->name,
             'action_type' => 'customer.toggle',
             'notifiable_id' => $customer->id,
             'notifiable_type' => Customer::class,

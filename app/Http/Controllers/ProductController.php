@@ -33,31 +33,27 @@ class ProductController extends Controller
             $q->where('is_active', $is_active);
         })->count();
 
-        $totalItems = Product::sum('stock');
-        $lowStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('stock', '>', 0)
-            ->where(function ($q) {
-                $q->where('stock', '<', 10)
-                  ->orWhere(function ($sub) {
-                      $sub->where('low_stock_alert_enabled', true)
-                          ->whereColumn('stock', '<=', 'low_stock_threshold');
-                  });
-            })
+        $totalItems = Product::where('track_stock', true)->sum('stock');
+        $lowStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('low_stock_alert_enabled', true)
+            ->where('stock', '>=', 10)
+            ->whereColumn('stock', '<=', 'low_stock_threshold')
             ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
             ->when($category, fn($q, $c) => $q->where('category', $c))
             ->count();
-        $criticalStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('stock', '>', 0)->where('stock', '<', 10)
+        $criticalStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)
             ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
             ->when($category, fn($q, $c) => $q->where('category', $c))
             ->count();
-        $outOfStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('stock', '<=', 0)
+        $outOfStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('stock', '<=', 0)
             ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
             ->when($category, fn($q, $c) => $q->where('category', $c))
             ->count();
-        $totalValuation = $is_active === '0' ? 0 : Product::where('is_active', true)
+        $totalValuation = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)
             ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
             ->when($category, fn($q, $c) => $q->where('category', $c))
             ->selectRaw('SUM(stock * price) as total')->value('total') ?? 0;
         $categories = Product::select('category')->whereNotNull('category')->distinct()->pluck('category');
+        $allProducts = Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'stock', 'track_stock']);
 
         return view('products.index', compact(
             'products',
@@ -68,6 +64,7 @@ class ProductController extends Controller
             'outOfStockCount',
             'totalValuation',
             'categories',
+            'allProducts',
             'search',
             'category',
             'is_active'
@@ -84,21 +81,33 @@ class ProductController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:255',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
             'price' => 'required|numeric|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'low_stock_alert_enabled' => 'nullable|boolean',
+            'track_stock' => 'nullable|boolean',
         ]);
 
+        $data['track_stock'] = $request->boolean('track_stock');
+        $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : 0;
         $data['low_stock_threshold'] = $data['low_stock_threshold'] ?? 30;
-        $data['low_stock_alert_enabled'] = $request->boolean('low_stock_alert_enabled');
+        $data['low_stock_alert_enabled'] = $data['track_stock'] && $request->boolean('low_stock_alert_enabled');
 
         $product = Product::create($data);
+
+        if ($request->has('components')) {
+            foreach ($request->components as $comp) {
+                $product->components()->create([
+                    'component_product_id' => $comp['product_id'],
+                    'quantity' => $comp['quantity'] ?? 1,
+                ]);
+            }
+        }
 
         Notification::create([
             'type' => 'success',
             'title' => 'Produk Baru',
-            'message' => $product->name . ' — Rp ' . number_format($product->price),
+            'message' => $product->name . ' — Rp ' . number_format($product->price) . ' oleh ' . auth()->user()->name,
             'action_type' => 'product.create',
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,
@@ -129,21 +138,34 @@ class ProductController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:255',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
             'price' => 'required|numeric|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'low_stock_alert_enabled' => 'nullable|boolean',
+            'track_stock' => 'nullable|boolean',
         ]);
 
+        $data['track_stock'] = $request->boolean('track_stock');
+        $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : 0;
         $data['low_stock_threshold'] = $data['low_stock_threshold'] ?? 30;
-        $data['low_stock_alert_enabled'] = $request->boolean('low_stock_alert_enabled');
+        $data['low_stock_alert_enabled'] = $data['track_stock'] && $request->boolean('low_stock_alert_enabled');
 
         $product->update($data);
+
+        $product->components()->delete();
+        if ($request->has('components')) {
+            foreach ($request->components as $comp) {
+                $product->components()->create([
+                    'component_product_id' => $comp['product_id'],
+                    'quantity' => $comp['quantity'] ?? 1,
+                ]);
+            }
+        }
 
         Notification::create([
             'type' => 'info',
             'title' => 'Produk Diupdate',
-            'message' => $product->name . ' berhasil diperbarui',
+            'message' => $product->name . ' berhasil diperbarui oleh ' . auth()->user()->name,
             'action_type' => 'product.update',
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,
@@ -161,7 +183,7 @@ class ProductController extends Controller
         Notification::create([
             'type' => 'error',
             'title' => 'Produk Dihapus',
-            'message' => $name . ' berhasil dihapus',
+            'message' => $name . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'product.delete',
         ]);
 
@@ -177,7 +199,7 @@ class ProductController extends Controller
         Notification::create([
             'type' => 'info',
             'title' => 'Status Produk',
-            'message' => $product->name . ' ' . ($status ? 'diaktifkan' : 'dinonaktifkan'),
+            'message' => $product->name . ' ' . ($status ? 'diaktifkan' : 'dinonaktifkan') . ' oleh ' . auth()->user()->name,
             'action_type' => 'product.toggle',
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,

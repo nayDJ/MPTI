@@ -15,10 +15,16 @@ class Product extends Model
         'low_stock_threshold',
         'low_stock_alert_enabled',
         'is_active',
+        'track_stock',
     ];
 
     public function saleItems(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function components(): HasMany
+    {
+        return $this->hasMany(ProductComponent::class);
     }
 }

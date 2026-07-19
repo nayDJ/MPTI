@@ -39,7 +39,8 @@ class DashboardController extends Controller
         ->take(5)
         ->get();
 
-    $lowStockProducts = Product::orderBy('stock', 'asc')
+    $lowStockProducts = Product::where('is_active', true)->where('track_stock', true)
+        ->orderBy('stock', 'asc')
         ->take(5)
         ->get();
 
@@ -78,15 +79,17 @@ class DashboardController extends Controller
             'total' => $expenseRaw->has($date) ? (int) $expenseRaw[$date]->total : 0,
         ]);
 
-    $criticalStock = Product::where('stock', '<=', 10)->count();
+    $criticalStock = Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)->count();
 
-    $stockHabis = Product::where('stock', '<=', 0)->count();
-    $stockKritis = Product::where('stock', '>', 0)->where('stock', '<', 10)->count();
-    $stockMenipis = Product::where('low_stock_alert_enabled', true)
+    $totalActiveTracked = Product::where('is_active', true)->where('track_stock', true)->count();
+    $stockHabis = Product::where('is_active', true)->where('track_stock', true)->where('stock', '<=', 0)->count();
+    $stockKritis = Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)->count();
+    $stockMenipis = Product::where('is_active', true)->where('track_stock', true)
+        ->where('low_stock_alert_enabled', true)
         ->where('stock', '>=', 10)
         ->whereColumn('stock', '<=', 'low_stock_threshold')
         ->count();
-    $stockAman = Product::count() - $stockHabis - $stockKritis - $stockMenipis;
+    $stockAman = $totalActiveTracked - $stockHabis - $stockKritis - $stockMenipis;
 
     $topDebtors = Sale::select('customer_id',
             DB::raw('COUNT(*) as total_transaksi'),

@@ -4,7 +4,7 @@
 
 <div class="min-h-screen bg-[#F3F6F8]" x-data="{
     submitting: false,
-    openEdit(id, name, category, stock, price, lowStockAlertEnabled, lowStockThreshold) {
+    openEdit(id, name, category, stock, price, lowStockAlertEnabled, lowStockThreshold, components, trackStock) {
         let form = document.getElementById('edit-product-form');
         form.action = '/products/' + id;
         document.getElementById('edit-name').value = name;
@@ -13,8 +13,10 @@
         document.getElementById('edit-product-id').value = id;
         let data = Alpine.$data(form);
         data.category = category || 'kemasan';
+        data.stockEnabled = trackStock ? 'true' : 'false';
         data.lowStockAlertEnabled = !!lowStockAlertEnabled;
         data.lowStockThreshold = lowStockThreshold || 30;
+        data.components = components || [];
         this.$dispatch('open-modal', 'edit-product');
     },
     confirmDelete(url) {
@@ -31,8 +33,10 @@
             document.getElementById('edit-product-id').value = {{ json_encode(old('_edit_id')) }};
             let data = Alpine.$data(form);
             data.category = {{ json_encode(old('category')) }} || 'kemasan';
+            data.stockEnabled = '{{ old('track_stock', true) ? "true" : "false" }}';
             data.lowStockAlertEnabled = {{ old('low_stock_alert_enabled') ? 'true' : 'false' }};
             data.lowStockThreshold = {{ old('low_stock_threshold', 30) }};
+            data.components = {{ json_encode(old('components', [])) }};
         @endif
     }
 }">
@@ -68,11 +72,11 @@
     </div>
 
     {{-- Stats --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-4 gap-6 mb-8">
 
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
             <div class="flex justify-between items-start">
-                <span class="material-symbols-outlined text-primary bg-primary-container/10 p-2 rounded-lg">inventory</span>
+                <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">inventory</span>
             </div>
             <div>
                 <p class="text-sm text-on-surface-variant">Total SKU</p>
@@ -82,7 +86,7 @@
 
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
             <div class="flex justify-between items-start">
-                <span class="material-symbols-outlined text-tertiary bg-tertiary-container/10 p-2 rounded-lg">warning</span>
+                <span class="material-symbols-outlined text-tertiary bg-tertiary/10 p-2 rounded-lg">warning</span>
             </div>
             <div>
                 <p class="text-sm text-on-surface-variant">Stok Rendah ≤ 30</p>
@@ -102,21 +106,11 @@
 
         <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
             <div class="flex justify-between items-start">
-                <span class="material-symbols-outlined text-secondary bg-secondary-container/10 p-2 rounded-lg">block</span>
+                <span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg">block</span>
             </div>
             <div>
                 <p class="text-sm text-on-surface-variant">Habis</p>
                 <p class="text-3xl font-bold text-red-700">{{ $outOfStockCount }}</p>
-            </div>
-        </div>
-
-        <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2 hover:border-primary/50 transition-colors">
-            <div class="flex justify-between items-start">
-                <span class="material-symbols-outlined text-secondary bg-secondary-container/10 p-2 rounded-lg">account_balance_wallet</span>
-            </div>
-            <div>
-                <p class="text-sm text-on-surface-variant">Valuasi Stok</p>
-                <p class="text-3xl font-bold text-on-surface">Rp {{ number_format($totalValuation) }}</p>
             </div>
         </div>
 
@@ -237,7 +231,7 @@
 
                 <tbody>
                     @forelse($products as $product)
-                        <tr class="border-b border-outline-variant/20 hover:bg-primary-container/5 transition-colors group">
+                        <tr class="border-b border-outline-variant/20 hover:bg-primary/5 transition-colors group">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="h-12 w-12 rounded-lg bg-secondary-container/30 flex items-center justify-center flex-shrink-0">
@@ -252,7 +246,7 @@
                             <td class="px-4 py-3">
                                 <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold
                                     @if(in_array($product->category, ['galon', 'air_tanki', 'kemasan', 'lainnya']))
-                                        bg-primary-container/10 text-primary-container
+                                        bg-primary/10 text-primary
                                     @else
                                         bg-secondary-container text-on-secondary-container
                                     @endif">
@@ -260,11 +254,15 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <p class="font-bold text-on-surface">{{ number_format($product->stock) }}</p>
-                                <p class="text-[10px] text-on-surface-variant">Unit</p>
+                                @if($product->track_stock)
+                                    <p class="font-bold text-on-surface">{{ number_format($product->stock) }}</p>
+                                    <p class="text-[10px] text-on-surface-variant">Unit</p>
+                                @else
+                                    <p class="text-on-surface-variant">-</p>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
-                                @if($product->is_active)
+                                @if($product->track_stock && $product->is_active)
                                     @php
                                         $threshold = $product->low_stock_alert_enabled ? $product->low_stock_threshold : 30;
                                     @endphp
@@ -289,6 +287,13 @@
                                             Tersedia
                                         </span>
                                     @endif
+                                @elseif(!$product->track_stock && $product->is_active)
+                                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+                                        <span class="w-2 h-2 rounded-full bg-green-600"></span>
+                                        Tersedia
+                                    </span>
+                                @elseif(!$product->track_stock)
+                                    <span class="text-gray-400">-</span>
                                 @else
                                     <span class="text-gray-400">-</span>
                                 @endif
@@ -303,9 +308,9 @@
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-center gap-2">
                                     <button
-                                        @click="openEdit({{ json_encode($product->id) }}, {{ json_encode($product->name) }}, {{ json_encode($product->category) }}, {{ json_encode($product->stock) }}, {{ json_encode($product->price) }}, {{ json_encode($product->low_stock_alert_enabled) }}, {{ json_encode($product->low_stock_threshold) }})"
+                                        @click="openEdit({{ json_encode($product->id) }}, {{ json_encode($product->name) }}, {{ json_encode($product->category) }}, {{ json_encode($product->stock) }}, {{ json_encode($product->price) }}, {{ json_encode($product->low_stock_alert_enabled) }}, {{ json_encode($product->low_stock_threshold) }}, {{ json_encode($product->components->map(fn($c) => ['product_id' => (string)$c->component_product_id, 'quantity' => $c->quantity])) }}, {{ json_encode($product->track_stock) }})"
                                         title="Edit"
-                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                         <span class="material-symbols-outlined">edit</span>
                                     </button>
                                     <form method="POST" action="{{ route('products.toggle-status', $product) }}" class="inline">
@@ -364,8 +369,12 @@
         x-data="{
             category: '{{ old('category') ?: 'kemasan' }}',
             otherCategory: '',
+            stockEnabled: 'true',
             lowStockAlertEnabled: {{ old('low_stock_alert_enabled') ? 'true' : 'true' }},
             lowStockThreshold: {{ old('low_stock_threshold', 30) }},
+            components: [],
+            componentSearch: '',
+            componentQty: 1,
         }">
         @csrf
         <input type="hidden" name="_form_type" value="add">
@@ -445,14 +454,34 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
-                            <input type="number" name="stock" min="0" value="{{ old('stock', 0) }}"
-                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                                required>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="stockEnabled === 'true' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="track_stock_radio" x-model="stockEnabled" value="true" class="text-primary focus:ring-primary">
+                                Aktifkan Stok
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="stockEnabled === 'false' ? 'border-error bg-error/5' : 'border-outline hover:border-error/50'">
+                                <input type="radio" name="track_stock_radio" x-model="stockEnabled" value="false" class="text-error focus:ring-error">
+                                Nonaktifkan Stok
+                            </label>
                         </div>
-                        <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                        <input type="hidden" name="track_stock" x-bind:value="stockEnabled === 'true' ? '1' : '0'">
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
+                                <input type="number" name="stock" min="0" value="{{ old('stock', 0) }}"
+                                    :disabled="stockEnabled === 'false'"
+                                    :class="stockEnabled === 'true'
+                                        ? 'bg-white border border-outline focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                                        : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'"
+                                    class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none transition-all text-sm"
+                                    x-bind:required="stockEnabled === 'true'">
+                            </div>
+                            <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                        </div>
                     </div>
                 </div>
 
@@ -468,7 +497,7 @@
                         <x-input-error :messages="$errors->get('price')" class="mt-1" />
                     </div>
 
-                    <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
+                    <div x-show="stockEnabled === 'true'" x-cloak class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-bold text-on-surface">Peringatan Stok Rendah</span>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -490,6 +519,51 @@
                         </div>
                         <input type="hidden" name="low_stock_alert_enabled" x-bind:value="lowStockAlertEnabled ? '1' : '0'">
                     </div>
+                </div>
+            </div>
+
+            </div>
+
+            <div class="px-6 pb-4">
+                <div class="border-t border-outline-variant/30 pt-5">
+                    <h4 class="text-sm font-bold text-on-surface mb-1">Komponen Produk</h4>
+                    <p class="text-xs text-on-surface-variant mb-4">Produk yang otomatis ikut terkirim saat produk ini dijual. Stok komponen ikut berkurang. Harga komponen Rp 0.</p>
+
+                    <div class="flex items-end gap-2 mb-3">
+                        <div class="flex-1">
+                            <select x-model="componentSearch" class="w-full px-3 py-2 bg-white border border-outline rounded-lg text-sm">
+                                <option value="">Pilih produk...</option>
+                                @foreach($allProducts as $p)
+                                    <option value="{{ $p->id }}">{{ $p->name }}@if($p->track_stock) (stok: {{ $p->stock }}) @endif</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="w-20">
+                            <input type="number" x-model="componentQty" min="1" value="1"
+                                class="w-full px-3 py-2 bg-white border border-outline rounded-lg text-sm text-center">
+                        </div>
+                        <button type="button"
+                            @click="if(componentSearch && !components.find(c => c.product_id == componentSearch)) { components.push({product_id: componentSearch, quantity: parseInt(componentQty) || 1}); componentSearch = ''; componentQty = 1; }"
+                            class="px-3 py-2 bg-primary text-white rounded-lg text-sm hover:opacity-90 transition">
+                            <span class="material-symbols-outlined text-base">add</span>
+                        </button>
+                    </div>
+
+                    <template x-for="(comp, i) in components" :key="i">
+                        <div class="flex items-center justify-between px-3 py-2 bg-surface-container-low rounded-lg mb-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-base">link</span>
+                                <span x-text="Object.values($el.closest('form').querySelectorAll('select option')).find(o => o.value == comp.product_id)?.text || comp.product_id"></span>
+                                <span class="text-outline">×</span>
+                                <span class="font-semibold" x-text="comp.quantity"></span>
+                            </div>
+                            <button type="button" @click="components.splice(i, 1)" class="text-error hover:text-red-700">
+                                <span class="material-symbols-outlined text-base">close</span>
+                            </button>
+                            <input type="hidden" :name="'components[' + i + '][product_id]'" :value="comp.product_id">
+                            <input type="hidden" :name="'components[' + i + '][quantity]'" :value="comp.quantity">
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -515,8 +589,12 @@
         x-data="{
             category: 'kemasan',
             otherCategory: '',
+            stockEnabled: 'true',
             lowStockAlertEnabled: true,
             lowStockThreshold: 30,
+            components: [],
+            componentSearch: '',
+            componentQty: 1,
         }">
         @csrf
         @method('PUT')
@@ -598,14 +676,34 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
-                            <input type="number" id="edit-stock" name="stock" min="0"
-                                class="w-full pl-10 pr-4 py-2.5 bg-white border border-outline rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                                required>
+                        <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="stockEnabled === 'true' ? 'border-primary bg-primary/5' : 'border-outline hover:border-primary/50'">
+                                <input type="radio" name="track_stock_radio" x-model="stockEnabled" value="true" class="text-primary focus:ring-primary">
+                                Aktifkan Stok
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors bg-white text-sm"
+                                :class="stockEnabled === 'false' ? 'border-error bg-error/5' : 'border-outline hover:border-error/50'">
+                                <input type="radio" name="track_stock_radio" x-model="stockEnabled" value="false" class="text-error focus:ring-error">
+                                Nonaktifkan Stok
+                            </label>
                         </div>
-                        <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                        <input type="hidden" name="track_stock" x-bind:value="stockEnabled === 'true' ? '1' : '0'">
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-on-surface-variant mb-1.5">Stok Awal</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">inventory_2</span>
+                                <input type="number" id="edit-stock" name="stock" min="0"
+                                    :disabled="stockEnabled === 'false'"
+                                    :class="stockEnabled === 'true'
+                                        ? 'bg-white border border-outline focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                                        : 'bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed'"
+                                    class="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none transition-all text-sm"
+                                    x-bind:required="stockEnabled === 'true'">
+                            </div>
+                            <x-input-error :messages="$errors->get('stock')" class="mt-1" />
+                        </div>
                     </div>
                 </div>
 
@@ -621,7 +719,7 @@
                         <x-input-error :messages="$errors->get('price')" class="mt-1" />
                     </div>
 
-                    <div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
+                    <div x-show="stockEnabled === 'true'" x-cloak class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/50">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-bold text-on-surface">Peringatan Stok Rendah</span>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -643,6 +741,51 @@
                         </div>
                         <input type="hidden" name="low_stock_alert_enabled" x-bind:value="lowStockAlertEnabled ? '1' : '0'">
                     </div>
+                </div>
+            </div>
+
+            </div>
+
+            <div class="px-6 pb-4">
+                <div class="border-t border-outline-variant/30 pt-5">
+                    <h4 class="text-sm font-bold text-on-surface mb-1">Komponen Produk</h4>
+                    <p class="text-xs text-on-surface-variant mb-4">Produk yang otomatis ikut terkirim saat produk ini dijual. Stok komponen ikut berkurang. Harga komponen Rp 0.</p>
+
+                    <div class="flex items-end gap-2 mb-3">
+                        <div class="flex-1">
+                            <select x-model="componentSearch" class="w-full px-3 py-2 bg-white border border-outline rounded-lg text-sm">
+                                <option value="">Pilih produk...</option>
+                                @foreach($allProducts as $p)
+                                    <option value="{{ $p->id }}">{{ $p->name }}@if($p->track_stock) (stok: {{ $p->stock }}) @endif</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="w-20">
+                            <input type="number" x-model="componentQty" min="1" value="1"
+                                class="w-full px-3 py-2 bg-white border border-outline rounded-lg text-sm text-center">
+                        </div>
+                        <button type="button"
+                            @click="if(componentSearch && !components.find(c => c.product_id == componentSearch)) { components.push({product_id: componentSearch, quantity: parseInt(componentQty) || 1}); componentSearch = ''; componentQty = 1; }"
+                            class="px-3 py-2 bg-primary text-white rounded-lg text-sm hover:opacity-90 transition">
+                            <span class="material-symbols-outlined text-base">add</span>
+                        </button>
+                    </div>
+
+                    <template x-for="(comp, i) in components" :key="i">
+                        <div class="flex items-center justify-between px-3 py-2 bg-surface-container-low rounded-lg mb-2 text-sm">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-outline text-base">link</span>
+                                <span x-text="Object.values($el.closest('form').querySelectorAll('select option')).find(o => o.value == comp.product_id)?.text || comp.product_id"></span>
+                                <span class="text-outline">×</span>
+                                <span class="font-semibold" x-text="comp.quantity"></span>
+                            </div>
+                            <button type="button" @click="components.splice(i, 1)" class="text-error hover:text-red-700">
+                                <span class="material-symbols-outlined text-base">close</span>
+                            </button>
+                            <input type="hidden" :name="'components[' + i + '][product_id]'" :value="comp.product_id">
+                            <input type="hidden" :name="'components[' + i + '][quantity]'" :value="comp.quantity">
+                        </div>
+                    </template>
                 </div>
             </div>
 

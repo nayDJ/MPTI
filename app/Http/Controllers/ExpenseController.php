@@ -83,7 +83,7 @@ class ExpenseController extends Controller
         Notification::create([
             'type' => 'success',
             'title' => 'Pengeluaran Baru',
-            'message' => $expense->description . ' — Rp ' . number_format($expense->amount),
+            'message' => $expense->description . ' — Rp ' . number_format($expense->amount) . ' oleh ' . auth()->user()->name,
             'action_type' => 'expense.create',
             'notifiable_id' => $expense->id,
             'notifiable_type' => Expense::class,
@@ -119,7 +119,7 @@ class ExpenseController extends Controller
         Notification::create([
             'type' => 'info',
             'title' => 'Pengeluaran Diupdate',
-            'message' => $expense->description . ' berhasil diperbarui',
+            'message' => $expense->description . ' berhasil diperbarui oleh ' . auth()->user()->name,
             'action_type' => 'expense.update',
             'notifiable_id' => $expense->id,
             'notifiable_type' => Expense::class,
@@ -137,7 +137,7 @@ class ExpenseController extends Controller
         Notification::create([
             'type' => 'error',
             'title' => 'Pengeluaran Dihapus',
-            'message' => $desc . ' berhasil dihapus',
+            'message' => $desc . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'expense.delete',
         ]);
 

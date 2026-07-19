@@ -43,7 +43,7 @@
         </p>
     </div>
     <button @click="$dispatch('open-modal', 'add-customer')"
-        class="bg-primary hover:bg-primary-container text-white px-5 py-3 rounded-xl shadow-sm transition whitespace-nowrap inline-flex items-center gap-2">
+        class="bg-primary hover:opacity-90 text-white px-5 py-3 rounded-xl shadow-sm transition whitespace-nowrap inline-flex items-center gap-2">
         <span class="material-symbols-outlined">add</span>
         Tambah Pelanggan
     </button>
@@ -52,17 +52,17 @@
 {{-- Stats --}}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
-        <span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg self-start">group</span>
+        <span class="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg self-start">group</span>
         <p class="text-sm text-on-surface-variant">Total Pelanggan</p>
         <p class="text-3xl font-bold text-on-surface">{{ number_format($totalCustomers) }}</p>
     </div>
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
-        <span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg self-start">receipt_long</span>
+        <span class="material-symbols-outlined text-tertiary bg-tertiary/10 p-2 rounded-lg self-start">receipt_long</span>
         <p class="text-sm text-on-surface-variant">Total Transaksi</p>
         <p class="text-3xl font-bold text-on-surface">{{ number_format($totalTransactions) }}</p>
     </div>
     <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 flex flex-col gap-2">
-        <span class="material-symbols-outlined text-secondary bg-secondary-fixed p-2 rounded-lg self-start">person_add</span>
+        <span class="material-symbols-outlined text-secondary bg-secondary/10 p-2 rounded-lg self-start">person_add</span>
         <p class="text-sm text-on-surface-variant">Pelanggan Baru Hari Ini</p>
         <p class="text-3xl font-bold text-green-600">{{ $newCustomers }}</p>
     </div>
@@ -192,7 +192,7 @@
                         $color = $colors[crc32($customer->id) % 4];
                         $hasDebt = ($customer->total_purchase ?? 0) > ($customer->total_paid ?? 0);
                     @endphp
-                    <tr class="border-b border-outline-variant/20 hover:bg-primary-container/5 transition-colors group">
+                    <tr class="border-b border-outline-variant/20 hover:bg-primary/5 transition-colors group">
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full {{ $color }} flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -225,20 +225,20 @@
                             <div class="flex items-center justify-center gap-2">
                                 <a href="{{ route('customers.show', $customer->id) }}"
                                     title="Lihat"
-                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                     <span class="material-symbols-outlined">visibility</span>
                                 </a>
                                 <button
                                     @click="openEdit({{ json_encode($customer->id) }}, {{ json_encode($customer->name) }}, {{ json_encode($customer->phone) }}, {{ json_encode($customer->address) }})"
                                     title="Edit"
-                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                    class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                     <span class="material-symbols-outlined">edit</span>
                                 </button>
                                 <form method="POST" action="{{ route('customers.toggle-status', $customer) }}" class="inline">
                                     @csrf
                                     <button type="submit"
                                         title="{{ $customer->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"
-                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary-container/10 rounded-lg transition-colors">
+                                        class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                         <span class="material-symbols-outlined">{{ $customer->is_active ? 'toggle_on' : 'toggle_off' }}</span>
                                     </button>
                                 </form>
@@ -259,7 +259,7 @@
                             <p class="text-sm text-on-surface-variant mb-6">Tambah pelanggan pertama untuk memulai</p>
                             <button
                                 @click="$dispatch('open-modal', 'add-customer')"
-                                class="bg-primary hover:bg-primary-container text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 shadow-sm">
+                                class="bg-primary hover:opacity-90 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition inline-flex items-center gap-2 shadow-sm">
                                 <span class="material-symbols-outlined text-base">add</span>
                                 Tambah Pelanggan
                             </button>

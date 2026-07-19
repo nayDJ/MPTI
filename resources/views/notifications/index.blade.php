@@ -55,7 +55,7 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between gap-2">
                             <p class="text-sm font-semibold text-on-surface truncate">{{ $n->title }}</p>
-                            <span class="text-xs text-on-surface-variant whitespace-nowrap">{{ $n->created_at->timezone('Asia/Jakarta')->format('g:i A') }}</span>
+                            <span class="text-xs text-on-surface-variant whitespace-nowrap">{{ $n->created_at->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, h:mm A') }}</span>
                         </div>
                         <p class="text-sm text-on-surface-variant mt-0.5">{{ $n->message }}</p>
                     </div>

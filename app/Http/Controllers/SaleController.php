@@ -166,7 +166,7 @@ class SaleController extends Controller
             foreach ($request->items as $i => $item) {
                 $product = Product::findOrFail($item['product_id']);
 
-                if ($item['quantity'] > $product->stock) {
+                if ($product->track_stock && $item['quantity'] > $product->stock) {
                     DB::rollBack();
                     return back()
                         ->withInput()
@@ -176,7 +176,9 @@ class SaleController extends Controller
                 $subtotal = $product->price * $item['quantity'];
                 $total += $subtotal;
 
-                $product->decrement('stock', $item['quantity']);
+                if ($product->track_stock) {
+                    $product->decrement('stock', $item['quantity']);
+                }
 
                 $itemsData[] = [
                     'product_id' => $product->id,
@@ -201,6 +203,26 @@ class SaleController extends Controller
                 $sale->items()->create($data);
             }
 
+            foreach ($request->items as $item) {
+                $product = Product::find($item['product_id']);
+                if ($product && $product->components()->exists()) {
+                    foreach ($product->components as $comp) {
+                        $compQty = $item['quantity'] * $comp->quantity;
+                        $compProduct = Product::find($comp->component_product_id);
+                        if ($compProduct) {
+                            if ($compProduct->track_stock) {
+                                $compProduct->decrement('stock', $compQty);
+                            }
+                            $sale->items()->create([
+                                'product_id' => $comp->component_product_id,
+                                'quantity' => $compQty,
+                                'subtotal' => 0,
+                            ]);
+                        }
+                    }
+                }
+            }
+
             DB::commit();
 
             $customerName = $sale->customer->name ?? 'Pelanggan';
@@ -208,7 +230,7 @@ class SaleController extends Controller
             Notification::create([
                 'type' => 'success',
                 'title' => 'Penjualan Baru',
-                'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' an. ' . $customerName . ' — Rp ' . number_format($sale->total_price),
+                'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' an. ' . $customerName . ' — Rp ' . number_format($sale->total_price) . ' oleh ' . auth()->user()->name,
                 'action_type' => 'sale.create',
                 'notifiable_id' => $sale->id,
                 'notifiable_type' => Sale::class,
@@ -336,7 +358,7 @@ class SaleController extends Controller
         Notification::create([
             'type' => 'info',
             'title' => 'Status Bayar Diubah',
-            'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' → ' . $data['payment_status'],
+            'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' → ' . $data['payment_status'] . ' oleh ' . auth()->user()->name,
             'action_type' => 'sale.update',
             'notifiable_id' => $sale->id,
             'notifiable_type' => Sale::class,
@@ -359,7 +381,7 @@ class SaleController extends Controller
         Notification::create([
             'type' => 'error',
             'title' => 'Penjualan Dihapus',
-            'message' => '#NQ-' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' berhasil dihapus',
+            'message' => '#NQ-' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'sale.delete',
         ]);
 

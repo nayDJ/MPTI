@@ -30,7 +30,7 @@ class NotificationController extends Controller
                 'type' => $n->type,
                 'title' => $n->title,
                 'message' => $n->message,
-                'created_at' => $n->created_at->timezone('Asia/Jakarta')->format('g:i A'),
+                'created_at' => $n->created_at->timezone('Asia/Jakarta')->isoFormat('D MMMM YYYY, h:mm A'),
                 'is_read' => $n->is_read,
             ]),
             'unread_count' => $unreadCount,

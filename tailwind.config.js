@@ -29,6 +29,9 @@ export default {
                 tertiary: {
                     DEFAULT: '#724200',
                 },
+                secondary: {
+                    DEFAULT: '#586377',
+                },
                 'secondary-container': {
                     DEFAULT: '#d5e0f8',
                 },

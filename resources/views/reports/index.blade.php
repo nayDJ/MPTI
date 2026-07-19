@@ -3,7 +3,8 @@
 <x-app-layout>
 
 <div class="min-h-screen bg-[#F3F6F8] p-8"
-     x-data="{ view: '{{ $view }}' }">
+     x-data="{ view: '{{ $view }}', ready: true }"
+     x-init="$watch('view', () => { ready = false; $nextTick(() => { ready = true; }) })">
 
     <div class="mb-8">
         <nav class="text-sm text-slate-400 mb-1">
@@ -90,7 +91,6 @@
                     </button>
                 </div>
                 <button class="p-1.5 text-on-surface-variant hover:bg-[#f1f4f6] rounded-lg">
-                    <span class="material-symbols-outlined">more_vert</span>
                 </button>
             </div>
         </div>
@@ -119,8 +119,9 @@
                     <div class="relative w-full flex justify-center">
                         <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#181c1e] text-white px-3 py-1.5 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg">Rp {{ number_format($chartIncome[$m]) }}</div>
                     </div>
-                    <div class="w-full rounded-t-lg transition-all duration-500 hover:brightness-110 cursor-pointer"
-                         style="height: {{ $heightPct }}%; {{ $isCurrent ? 'background: #0F6E8C;' : 'background: rgba(15, 110, 140, 0.25);' }}"></div>
+                    <div class="w-full rounded-t-lg hover:brightness-110 cursor-pointer bar-item"
+                         style="height: {{ $heightPct }}%; transition-delay: {{ $m * 0.04 }}s; {{ $isCurrent ? 'background: #0F6E8C;' : 'background: rgba(15, 110, 140, 0.25);' }}"
+                         :style="{ transform: ready ? 'scaleY(1)' : 'scaleY(0)' }"></div>
                     <span class="text-[11px] font-medium {{ $isCurrent ? 'text-primary font-bold' : 'text-on-surface-variant' }}">{{ $monthNames[$m] }}</span>
                 </div>
             @endfor
@@ -141,9 +142,10 @@
                     <div class="relative w-full flex justify-center">
                         <div class="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#181c1e] text-white px-3 py-1.5 rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none shadow-lg">Rp {{ number_format($chartExpense[$m]) }}</div>
                     </div>
-                    <div class="w-full rounded-t-lg transition-all duration-500 hover:brightness-110 cursor-pointer"
-                         style="height: {{ $heightPct }}%; {{ $isCurrent ? 'background: #0F6E8C;' : 'background: rgba(15, 110, 140, 0.25);' }}"></div>
-                    <span class="text-[11px] font-medium {{ $isCurrent ? 'text-primary font-bold' : 'text-on-surface-variant' }}">{{ $monthNames[$m] }}</span>
+                    <div class="w-full rounded-t-lg hover:brightness-110 cursor-pointer bar-item"
+                         style="height: {{ $heightPct }}%; transition-delay: {{ $m * 0.04 }}s; {{ $isCurrent ? 'background: #EF4444;' : 'background: rgba(239, 68, 68, 0.25);' }}"
+                         :style="{ transform: ready ? 'scaleY(1)' : 'scaleY(0)' }"></div>
+                    <span class="text-[11px] font-medium {{ $isCurrent ? 'text-red-500 font-bold' : 'text-on-surface-variant' }}">{{ $monthNames[$m] }}</span>
                 </div>
             @endfor
         </div>

@@ -17,10 +17,6 @@
         document.getElementById('edit-payment-form').action = '/sales/' + id;
         this.$dispatch('open-modal', 'edit-payment-status');
     },
-    confirmDelete(url) {
-        document.getElementById('delete-sale-form').action = url;
-        this.$dispatch('open-modal', 'confirm-delete-sale');
-    }
 }">
 
     {{-- Header --}}
@@ -259,11 +255,6 @@
                                             title="Ubah Status Pembayaran"
                                             class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                                         <span class="material-symbols-outlined">payments</span>
-                                    </button>
-                                    <button @click="confirmDelete('/sales/' + {{ $sale->id }})"
-                                            title="Hapus"
-                                            class="p-1.5 text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-colors">
-                                        <span class="material-symbols-outlined">delete</span>
                                     </button>
                                 </div>
                             </td>
@@ -769,29 +760,6 @@
                 </button>
             </div>
 
-        </div>
-    </form>
-</x-modal>
-
-{{-- Modal Hapus --}}
-<x-modal name="confirm-delete-sale" focusable>
-    <form id="delete-sale-form" method="POST" class="p-6" @submit="submitting = true">
-        @csrf
-        @method('DELETE')
-        <div class="text-center">
-            <span class="material-symbols-outlined text-error text-5xl mb-4">warning</span>
-            <h2 class="text-lg font-bold text-slate-800 mb-2">Hapus Penjualan</h2>
-            <p class="text-sm text-gray-500 mb-6">Yakin ingin menghapus penjualan ini? Tindakan ini tidak bisa dibatalkan.</p>
-        </div>
-        <div class="flex justify-end gap-3">
-            <button type="button" @click="$dispatch('close-modal', 'confirm-delete-sale')"
-                class="px-5 py-2.5 text-sm text-slate-600 hover:text-slate-800 font-medium">
-                Batal
-            </button>
-            <button type="submit" :disabled="submitting"
-                class="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed">
-                Ya, Hapus
-            </button>
         </div>
     </form>
 </x-modal>
