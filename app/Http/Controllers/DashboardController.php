@@ -14,23 +14,24 @@ class DashboardController extends Controller
 {
     public function index()
 {
+    $currentStart = now()->startOfMonth();
+    $currentEnd = now()->endOfMonth();
+
     $totalCustomers = Customer::count();
     $totalProducts = Product::count();
     $totalSales = Sale::count();
+    
     $lunasIncome = Sale::where('payment_status', 'lunas')
-        ->whereMonth('sales_date', now()->month)
-        ->whereYear('sales_date', now()->year)
+        ->whereBetween('sales_date', [$currentStart, $currentEnd])
         ->sum('total_price');
 
     $cicilIncome = Sale::where('payment_status', 'cicil')
-        ->whereMonth('sales_date', now()->month)
-        ->whereYear('sales_date', now()->year)
+        ->whereBetween('sales_date', [$currentStart, $currentEnd])
         ->sum('paid_amount');
 
     $totalIncome = $lunasIncome + $cicilIncome;
 
-    $totalExpense = Expense::whereMonth('expense_date', now()->month)
-        ->whereYear('expense_date', now()->year)
+    $totalExpense = Expense::whereBetween('expense_date', [$currentStart, $currentEnd])
         ->sum('amount');
 
     $latestSales = Sale::with('customer')
@@ -42,29 +43,40 @@ class DashboardController extends Controller
         ->take(5)
         ->get();
 
-   $salesChart = Sale::select(
-        DB::raw('DATE(sales_date) as date'),
-        DB::raw("SUM(CASE WHEN payment_status = 'lunas' THEN total_price WHEN payment_status = 'cicil' THEN paid_amount ELSE 0 END) as total")
-    )
-    ->groupBy('date')
-    ->orderBy('date')
-    ->get()
-    ->transform(fn($d) => [
-        'label' => Carbon::parse($d->date)->format('d M'),
-        'total' => $d->total,
-    ]);
+   $periodRange = [];
+        for ($date = $currentStart->copy(); $date->lte($currentEnd); $date->addDay()) {
+            $periodRange[] = $date->format('Y-m-d');
+        }
 
-   $expenseChart = Expense::select(
-        DB::raw('DATE(expense_date) as date'),
-        DB::raw('SUM(amount) as total')
-    )
-    ->groupBy('date')
-    ->orderBy('date')
-    ->get()
-    ->transform(fn($d) => [
-        'label' => Carbon::parse($d->date)->format('d M'),
-        'total' => $d->total,
-    ]);
+        $salesRaw = Sale::select(
+                DB::raw('DATE(sales_date) as date'),
+                DB::raw("SUM(CASE WHEN payment_status = 'lunas' THEN total_price WHEN payment_status = 'cicil' THEN paid_amount ELSE 0 END) as total")
+            )
+            ->whereBetween('sales_date', [$currentStart, $currentEnd])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $expenseRaw = Expense::select(
+                DB::raw('DATE(expense_date) as date'),
+                DB::raw('SUM(amount) as total')
+            )
+            ->whereBetween('expense_date', [$currentStart, $currentEnd])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $salesChart = collect($periodRange)->map(fn($date) => [
+            'label' => Carbon::parse($date)->format('d M'),
+            'total' => $salesRaw->has($date) ? (int) $salesRaw[$date]->total : 0,
+        ]);
+
+        $expenseChart = collect($periodRange)->map(fn($date) => [
+            'label' => Carbon::parse($date)->format('d M'),
+            'total' => $expenseRaw->has($date) ? (int) $expenseRaw[$date]->total : 0,
+        ]);
 
     $criticalStock = Product::where('stock', '<=', 10)->count();
 
