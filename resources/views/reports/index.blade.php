@@ -163,7 +163,7 @@
                         <span class="material-symbols-outlined text-[#6f787e]">inventory_2</span>
                     </div>
                     <div class="flex-grow min-w-0">
-                        <h4 class="font-semibold text-on-surface truncate">{{ $item->product->name }}</h4>
+                        <h4 class="font-semibold text-on-surface truncate">{{ $item->product?->name ?? '-' }}</h4>
                         <p class="text-sm text-on-surface-variant">{{ number_format($item->total_sold) }} terjual</p>
                     </div>
                     <div class="text-right flex-shrink-0">
@@ -189,10 +189,10 @@
                 @forelse($topCustomers as $customer)
                     <div class="p-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors">
                         <div class="w-9 h-9 rounded-full bg-[#d5e0f8] flex items-center justify-center flex-shrink-0 font-bold text-[#545f73] text-sm">
-                            {{ strtoupper(substr($customer->customer->name, 0, 2)) }}
+                            {{ strtoupper(substr($customer->customer?->name ?? '-', 0, 2)) }}
                         </div>
                         <div class="flex-grow min-w-0">
-                            <h4 class="font-semibold text-on-surface truncate">{{ $customer->customer->name }}</h4>
+                            <h4 class="font-semibold text-on-surface truncate">{{ $customer->customer?->name ?? '-' }}</h4>
                             <p class="text-sm text-on-surface-variant">{{ $customer->total_orders }} Pesanan</p>
                         </div>
                         <div class="text-right flex-shrink-0">
@@ -214,7 +214,7 @@
                 @forelse($topDebtors as $debtor)
                     <div class="p-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors">
                         <div class="w-9 h-9 rounded-full bg-[#ffdad6] flex items-center justify-center flex-shrink-0 font-bold text-[#ba1a1a] text-sm">
-                            {{ strtoupper(substr($debtor->customer->name, 0, 2)) }}
+                            {{ strtoupper(substr($debtor->customer?->name ?? '-', 0, 2)) }}
                         </div>
                         <div class="flex-grow min-w-0">
                             <h4 class="font-semibold text-on-surface truncate">{{ $debtor->customer->name }}</h4>
@@ -253,7 +253,7 @@
                             @forelse($recentSales as $sale)
                                 <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low">
                                     <td class="p-4 text-sm">{{ \Carbon\Carbon::parse($sale->sales_date)->isoFormat('D MMM YYYY') }}</td>
-                                    <td class="p-4 text-sm font-medium">{{ $sale->customer->name ?? '-' }}</td>
+                                    <td class="p-4 text-sm font-medium">{{ $sale->customer?->name ?? '-' }}</td>
                                     <td class="p-4 text-sm text-right font-semibold">Rp {{ number_format($sale->total_price) }}</td>
                                     <td class="p-4 text-center">
                                         <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium

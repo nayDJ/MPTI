@@ -10,72 +10,72 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class CustomerController extends Controller
 {
-    public function index(Request $request)
+    private function filterCustomers(Request $request)
     {
         $search = $request->search;
         $is_active = $request->is_active;
         $debt_status = $request->debt_status;
 
-        $customers = Customer::withSum(['sales as total_purchase'], 'total_price')
+        return Customer::withSum(['sales as total_purchase'], 'total_price')
             ->withSum(['sales as total_paid'], 'paid_amount')
-            ->when($search, function ($q, $search) {
+            ->when($search, function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('address', 'like', "%{$search}%");
-            })->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
-                $q->where('is_active', $is_active);
-            })->when($debt_status === 'hutang', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-            ->when($debt_status === 'lunas', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-            ->latest()->paginate(10)->withQueryString();
+            })
+            ->when($is_active !== null && $is_active !== '', fn($q) => $q->where('is_active', $is_active))
+            // ponytail: debt subquery diulang 6x — ekstrak ke scope kalau tambah query lain
+            ->when($debt_status === 'hutang', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
+            ->when($debt_status === 'lunas', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'));
+    }
 
-        $totalCustomers = Customer::when($search, function ($q, $search) {
+    public function index(Request $request)
+    {
+        $customers = ($this->filterCustomers($request))->latest()->paginate(10)->withQueryString();
+
+        $totalCustomers = ($this->filterCustomers($request))->count();
+        $newCustomers = Customer::whereDate('created_at', now()->toDateString())->count();
+
+        $debtorCount = Customer::whereHas('sales', fn($q) => $q->whereColumn('total_price', '>', 'paid_amount'))
+            ->when($request->search, fn($q) => $q->where(function ($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                  ->orWhere('phone', 'like', "%{$request->search}%")
+                  ->orWhere('address', 'like', "%{$request->search}%");
+            }))
+            ->when($request->is_active !== null && $request->is_active !== '', fn($q) => $q->where('is_active', $request->is_active))
+            ->count();
+
+        $totalTransactions = Sale::whereHas('customer', fn($q) => $this->applyCustomerFilters($q, $request))->count();
+
+        return view('customers.index', [
+            'customers' => $customers,
+            'totalCustomers' => $totalCustomers,
+            'newCustomers' => $newCustomers,
+            'totalTransactions' => $totalTransactions,
+            'debtorCount' => $debtorCount,
+            'search' => $request->search,
+            'is_active' => $request->is_active,
+            'debt_status' => $request->debt_status,
+        ]);
+    }
+
+    private function applyCustomerFilters($q, Request $request)
+    {
+        $search = $request->search;
+        $is_active = $request->is_active;
+        $debt_status = $request->debt_status;
+
+        $q->when($search, function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
               ->orWhere('phone', 'like', "%{$search}%")
               ->orWhere('address', 'like', "%{$search}%");
         })->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
             $q->where('is_active', $is_active);
-        })->when($debt_status === 'hutang', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-        ->when($debt_status === 'lunas', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-        ->count();
-
-        $newCustomers = Customer::whereDate('created_at', now()->toDateString())->count();
-
-        $totalTransactions = Sale::whereHas('customer', function ($q) use ($search, $is_active, $debt_status) {
-            $q->when($search, function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
-            })->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
-                $q->where('is_active', $is_active);
-            })->when($debt_status === 'hutang', function ($q) {
-                $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)');
-            })->when($debt_status === 'lunas', function ($q) {
-                $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)');
-            });
-        })->count();
-
-        $debtorCount = Customer::whereHas('sales', function ($q) {
-            $q->whereColumn('total_price', '>', 'paid_amount');
-        })->when($search, fn($q) => $q->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%")->orWhere('address', 'like', "%{$search}%");
-        }))->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
-            $q->where('is_active', $is_active);
-        })->count();
-
-        return view('customers.index', compact(
-            'customers',
-            'totalCustomers',
-            'newCustomers',
-            'totalTransactions',
-            'debtorCount',
-            'search',
-            'is_active',
-            'debt_status'
-        ));
-    }
-    public function create()
-    {
-        return redirect()->route('customers.index');
+        })->when($debt_status === 'hutang', function ($q) {
+            $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)');
+        })->when($debt_status === 'lunas', function ($q) {
+            $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)');
+        });
     }
 
     public function show(Customer $customer)
@@ -90,12 +90,7 @@ class CustomerController extends Controller
         $sales = $customer->sales()->latest()->with('items.product')->paginate(15);
 
         return view('customers.show', compact(
-            'customer',
-            'totalTransactions',
-            'totalPurchase',
-            'totalPaid',
-            'totalDebt',
-            'sales'
+            'customer', 'totalTransactions', 'totalPurchase', 'totalPaid', 'totalDebt', 'sales'
         ));
     }
 
@@ -126,11 +121,6 @@ class CustomerController extends Controller
             ->with('success', 'Customer berhasil ditambahkan');
     }
 
-    public function edit(Customer $customer)
-    {
-        return redirect()->route('customers.index');
-    }
-
     public function update(Request $request, Customer $customer)
     {
         $data = $request->validate([
@@ -149,7 +139,7 @@ class CustomerController extends Controller
             'type' => 'info',
             'title' => 'Pelanggan Diupdate',
             'message' => $customer->name . ' berhasil diperbarui oleh ' . auth()->user()->name,
-            'action_type' => 'customer.update',
+            'action_type' => Notification::ACTION_CUSTOMER_UPDATE,
             'notifiable_id' => $customer->id,
             'notifiable_type' => Customer::class,
         ]);
@@ -165,10 +155,10 @@ class CustomerController extends Controller
         $customer->delete();
 
         Notification::create([
-            'type' => 'error',
+            'type' => Notification::TYPE_ERROR,
             'title' => 'Pelanggan Dihapus',
             'message' => $name . ' berhasil dihapus oleh ' . auth()->user()->name,
-            'action_type' => 'customer.delete',
+            'action_type' => Notification::ACTION_CUSTOMER_DELETE,
         ]);
 
         return redirect()->route('customers.index')
@@ -231,22 +221,14 @@ class CustomerController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $search = $request->search;
-        $is_active = $request->is_active;
-        $debt_status = $request->debt_status;
+        $customers = ($this->filterCustomers($request))->latest()->get();
 
-        $customers = Customer::withCount('sales')
-            ->withSum(['sales as total_purchase'], 'total_price')
-            ->withSum(['sales as total_paid'], 'paid_amount')
-            ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%")
-                ->orWhere('phone', 'like', "%{$s}%")
-                ->orWhere('address', 'like', "%{$s}%"))
-            ->when($is_active !== null && $is_active !== '', fn($q) => $q->where('is_active', $is_active))
-            ->when($debt_status === 'hutang', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) > (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-            ->when($debt_status === 'lunas', fn($q) => $q->whereRaw('(SELECT COALESCE(SUM(s.total_price), 0) FROM sales s WHERE s.customer_id = customers.id) <= (SELECT COALESCE(SUM(s.paid_amount), 0) FROM sales s WHERE s.customer_id = customers.id)'))
-            ->latest()->get();
-
-        $pdf = Pdf::loadView('customers.pdf', compact('customers', 'search', 'is_active', 'debt_status'));
+        $pdf = Pdf::loadView('customers.pdf', [
+            'customers' => $customers,
+            'search' => $request->search,
+            'is_active' => $request->is_active,
+            'debt_status' => $request->debt_status,
+        ]);
         return $pdf->download('laporan-pelanggan.pdf');
     }
 }

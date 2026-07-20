@@ -79,8 +79,6 @@ class DashboardController extends Controller
             'total' => $expenseRaw->has($date) ? (int) $expenseRaw[$date]->total : 0,
         ]);
 
-    $criticalStock = Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)->count();
-
     $totalActiveTracked = Product::where('is_active', true)->where('track_stock', true)->count();
     $stockHabis = Product::where('is_active', true)->where('track_stock', true)->where('stock', '<=', 0)->count();
     $stockKritis = Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)->count();
@@ -117,7 +115,6 @@ class DashboardController extends Controller
         'lowStockProducts',
         'salesChart',
         'expenseChart',
-        'criticalStock',
         'stockHabis',
         'stockKritis',
         'stockMenipis',

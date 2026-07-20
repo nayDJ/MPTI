@@ -10,10 +10,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ExpenseController extends Controller
 {
-    public function index(Request $request)
+    private function filterExpenses(Request $request)
     {
-        $search = $request->search;
-        $category = $request->category;
         $period = $request->period;
         $from = $request->from;
         $to = $request->to;
@@ -28,11 +26,16 @@ class ExpenseController extends Controller
             $to = now()->endOfMonth()->toDateString();
         }
 
-        $query = Expense::query()
-            ->when($search, fn($q, $s) => $q->where('description', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
+        return Expense::query()
+            ->when($request->search, fn($q, $s) => $q->where('description', 'like', "%{$s}%"))
+            ->when($request->category, fn($q, $c) => $q->where('category', $c))
             ->when($from, fn($q, $f) => $q->whereDate('expense_date', '>=', $f))
             ->when($to, fn($q, $t) => $q->whereDate('expense_date', '<=', $t));
+    }
+
+    public function index(Request $request)
+    {
+        $query = $this->filterExpenses($request);
 
         $expenses = (clone $query)->latest('expense_date')->paginate(10)->withQueryString();
         $totalExpense = (clone $query)->sum('amount');
@@ -51,20 +54,24 @@ class ExpenseController extends Controller
             ->groupBy('category')->orderByDesc('total')->get();
 
         $categories = Category::orderBy('name')->get();
-
         $highestExpense = (clone $query)->orderByDesc('amount')->first();
         $averageDaily = $totalItems > 0 ? round($totalExpense / $totalItems) : 0;
 
-        return view('expenses.index', compact(
-            'expenses', 'totalExpense', 'totalItems', 'expenseGrowth',
-            'categoryDistribution', 'categories', 'highestExpense', 'averageDaily',
-            'search', 'category', 'period', 'from', 'to'
-        ));
-    }
-
-    public function create()
-    {
-        return redirect()->route('expenses.index');
+        return view('expenses.index', [
+            'expenses' => $expenses,
+            'totalExpense' => $totalExpense,
+            'totalItems' => $totalItems,
+            'expenseGrowth' => $expenseGrowth,
+            'categoryDistribution' => $categoryDistribution,
+            'categories' => $categories,
+            'highestExpense' => $highestExpense,
+            'averageDaily' => $averageDaily,
+            'search' => $request->search,
+            'category' => $request->category,
+            'period' => $request->period,
+            'from' => $request->from,
+            'to' => $request->to,
+        ]);
     }
 
     public function store(Request $request)
@@ -81,10 +88,10 @@ class ExpenseController extends Controller
         Category::firstOrCreate(['name' => $request->category]);
 
         Notification::create([
-            'type' => 'success',
+            'type' => Notification::TYPE_SUCCESS,
             'title' => 'Pengeluaran Baru',
             'message' => $expense->description . ' — Rp ' . number_format($expense->amount) . ' oleh ' . auth()->user()->name,
-            'action_type' => 'expense.create',
+            'action_type' => Notification::ACTION_EXPENSE_CREATE,
             'notifiable_id' => $expense->id,
             'notifiable_type' => Expense::class,
         ]);
@@ -96,11 +103,6 @@ class ExpenseController extends Controller
     public function show(Expense $expense)
     {
         return view('expenses.show', compact('expense'));
-    }
-
-    public function edit(Expense $expense)
-    {
-        return redirect()->route('expenses.index');
     }
 
     public function update(Request $request, Expense $expense)
@@ -117,10 +119,10 @@ class ExpenseController extends Controller
         Category::firstOrCreate(['name' => $request->category]);
 
         Notification::create([
-            'type' => 'info',
+            'type' => Notification::TYPE_INFO,
             'title' => 'Pengeluaran Diupdate',
             'message' => $expense->description . ' berhasil diperbarui oleh ' . auth()->user()->name,
-            'action_type' => 'expense.update',
+            'action_type' => Notification::ACTION_EXPENSE_UPDATE,
             'notifiable_id' => $expense->id,
             'notifiable_type' => Expense::class,
         ]);
@@ -135,10 +137,10 @@ class ExpenseController extends Controller
         $expense->delete();
 
         Notification::create([
-            'type' => 'error',
+            'type' => Notification::TYPE_ERROR,
             'title' => 'Pengeluaran Dihapus',
             'message' => $desc . ' berhasil dihapus oleh ' . auth()->user()->name,
-            'action_type' => 'expense.delete',
+            'action_type' => Notification::ACTION_EXPENSE_DELETE,
         ]);
 
         return redirect()->route('expenses.index')
@@ -147,34 +149,17 @@ class ExpenseController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $search = $request->search;
-        $category = $request->category;
-        $period = $request->period;
-        $from = $request->from;
-        $to = $request->to;
+        $expenses = (clone $this->filterExpenses($request))->latest('expense_date')->get();
+        $totalExpense = $expenses->sum('amount');
 
-        if ($period === 'hari_ini') {
-            $from = $to = now()->toDateString();
-        } elseif ($period === 'minggu_ini') {
-            $from = now()->startOfWeek()->toDateString();
-            $to = now()->endOfWeek()->toDateString();
-        } elseif ($period === 'bulan_ini') {
-            $from = now()->startOfMonth()->toDateString();
-            $to = now()->endOfMonth()->toDateString();
-        }
-
-        $query = Expense::query()
-            ->when($search, fn($q, $s) => $q->where('description', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->when($from, fn($q, $f) => $q->whereDate('expense_date', '>=', $f))
-            ->when($to, fn($q, $t) => $q->whereDate('expense_date', '<=', $t));
-
-        $expenses = (clone $query)->latest('expense_date')->get();
-        $totalExpense = (clone $query)->sum('amount');
-
-        $pdf = Pdf::loadView('expenses.pdf', compact(
-            'expenses', 'totalExpense', 'search', 'category', 'from', 'to'
-        ));
+        $pdf = Pdf::loadView('expenses.pdf', [
+            'expenses' => $expenses,
+            'totalExpense' => $totalExpense,
+            'search' => $request->search,
+            'category' => $request->category,
+            'from' => $request->from,
+            'to' => $request->to,
+        ]);
         return $pdf->download('laporan-pengeluaran.pdf');
     }
 }

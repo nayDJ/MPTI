@@ -6,69 +6,71 @@ use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Notification;
 use Barryvdh\DomPDF\Facade\Pdf;
+
 class ProductController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Request $request)
+    private function filterProducts(Request $request)
     {
         $search = $request->search;
         $category = $request->category;
         $is_active = $request->is_active;
 
-        $products = Product::when($search, function ($q, $search) {
-            $q->where('name', 'like', "%{$search}%");
-        })->when($category, function ($q, $category) {
-            $q->where('category', $category);
-        })->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
-            $q->where('is_active', $is_active);
-        })->latest()->paginate(10)->withQueryString();
+        return Product::when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
+            ->when($category, fn($q, $c) => $q->where('category', $c))
+            ->when($is_active !== null && $is_active !== '', fn($q) => $q->where('is_active', $is_active));
+    }
 
-        $totalProducts = Product::when($search, function ($q, $search) {
-            $q->where('name', 'like', "%{$search}%");
-        })->when($category, function ($q, $category) {
-            $q->where('category', $category);
-        })->when($is_active !== null && $is_active !== '', function ($q) use ($is_active) {
-            $q->where('is_active', $is_active);
-        })->count();
+    public function index(Request $request)
+    {
+        $category = $request->category;
+
+        $products = ($this->filterProducts($request))->latest()->paginate(10)->withQueryString();
+        $totalProducts = ($this->filterProducts($request))->count();
 
         $totalItems = Product::where('track_stock', true)->sum('stock');
-        $lowStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('low_stock_alert_enabled', true)
-            ->where('stock', '>=', 10)
-            ->whereColumn('stock', '<=', 'low_stock_threshold')
-            ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->count();
-        $criticalStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('stock', '>', 0)->where('stock', '<', 10)
-            ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->count();
-        $outOfStockCount = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)->where('stock', '<=', 0)
-            ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->count();
-        $totalValuation = $is_active === '0' ? 0 : Product::where('is_active', true)->where('track_stock', true)
-            ->when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->selectRaw('SUM(stock * price) as total')->value('total') ?? 0;
+
+        // ponytail: consolidate 4 queries → 1 selectRaw with multiple aggregates
+        if ($request->is_active === '0') {
+            $lowStockCount = 0;
+            $criticalStockCount = 0;
+            $outOfStockCount = 0;
+            $totalValuation = 0;
+        } else {
+            $stats = Product::where('is_active', true)
+                ->where('track_stock', true)
+                ->when($request->search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
+                ->when($category, fn($q, $c) => $q->where('category', $c))
+                ->selectRaw('
+                    SUM(CASE WHEN low_stock_alert_enabled = 1 AND stock >= 10 AND stock <= low_stock_threshold THEN 1 ELSE 0 END) as low_stock_count,
+                    SUM(CASE WHEN stock > 0 AND stock < 10 THEN 1 ELSE 0 END) as critical_stock_count,
+                    SUM(CASE WHEN stock <= 0 THEN 1 ELSE 0 END) as out_of_stock_count,
+                    SUM(stock * price) as total_valuation
+                ')
+                ->first();
+
+            $lowStockCount = $stats->low_stock_count ?? 0;
+            $criticalStockCount = $stats->critical_stock_count ?? 0;
+            $outOfStockCount = $stats->out_of_stock_count ?? 0;
+            $totalValuation = $stats->total_valuation ?? 0;
+        }
+
         $categories = Product::select('category')->whereNotNull('category')->distinct()->pluck('category');
         $allProducts = Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'stock', 'track_stock']);
 
-        return view('products.index', compact(
-            'products',
-            'totalProducts',
-            'totalItems',
-            'lowStockCount',
-            'criticalStockCount',
-            'outOfStockCount',
-            'totalValuation',
-            'categories',
-            'allProducts',
-            'search',
-            'category',
-            'is_active'
-        ));
+        return view('products.index', [
+            'products' => $products,
+            'totalProducts' => $totalProducts,
+            'totalItems' => $totalItems,
+            'lowStockCount' => $lowStockCount,
+            'criticalStockCount' => $criticalStockCount,
+            'outOfStockCount' => $outOfStockCount,
+            'totalValuation' => $totalValuation,
+            'categories' => $categories,
+            'allProducts' => $allProducts,
+            'search' => $request->search,
+            'category' => $category,
+            'is_active' => $request->is_active,
+        ]);
     }
 
     public function create()
@@ -105,10 +107,10 @@ class ProductController extends Controller
         }
 
         Notification::create([
-            'type' => 'success',
+            'type' => Notification::TYPE_SUCCESS,
             'title' => 'Produk Baru',
             'message' => $product->name . ' — Rp ' . number_format($product->price) . ' oleh ' . auth()->user()->name,
-            'action_type' => 'product.create',
+            'action_type' => Notification::ACTION_PRODUCT_CREATE,
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,
         ]);
@@ -117,18 +119,7 @@ class ProductController extends Controller
             ->with('success', 'Produk berhasil ditambahkan');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        abort(404);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-        public function edit(Product $product)
+    public function edit(Product $product)
     {
         return view('products.edit', compact('product'));
     }
@@ -166,7 +157,7 @@ class ProductController extends Controller
             'type' => 'info',
             'title' => 'Produk Diupdate',
             'message' => $product->name . ' berhasil diperbarui oleh ' . auth()->user()->name,
-            'action_type' => 'product.update',
+            'action_type' => Notification::ACTION_PRODUCT_UPDATE,
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,
         ]);
@@ -181,7 +172,7 @@ class ProductController extends Controller
         $product->delete();
 
         Notification::create([
-            'type' => 'error',
+            'type' => Notification::TYPE_ERROR,
             'title' => 'Produk Dihapus',
             'message' => $name . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'product.delete',
@@ -200,7 +191,7 @@ class ProductController extends Controller
             'type' => 'info',
             'title' => 'Status Produk',
             'message' => $product->name . ' ' . ($status ? 'diaktifkan' : 'dinonaktifkan') . ' oleh ' . auth()->user()->name,
-            'action_type' => 'product.toggle',
+            'action_type' => Notification::ACTION_PRODUCT_TOGGLE,
             'notifiable_id' => $product->id,
             'notifiable_type' => Product::class,
         ]);
@@ -211,18 +202,15 @@ class ProductController extends Controller
 
     public function exportPdf(Request $request)
     {
-        $search = $request->search;
-        $category = $request->category;
-        $is_active = $request->is_active;
-
-        $products = Product::when($search, fn($q, $s) => $q->where('name', 'like', "%{$s}%"))
-            ->when($category, fn($q, $c) => $q->where('category', $c))
-            ->when($is_active !== null && $is_active !== '', fn($q) => $q->where('is_active', $is_active))
-            ->latest()->get();
-
+        $products = ($this->filterProducts($request))->latest()->get();
         $totalValuation = $products->sum(fn($p) => $p->stock * $p->price);
 
-        $pdf = Pdf::loadView('products.pdf', compact('products', 'totalValuation', 'search', 'category'));
+        $pdf = Pdf::loadView('products.pdf', [
+            'products' => $products,
+            'totalValuation' => $totalValuation,
+            'search' => $request->search,
+            'category' => $request->category,
+        ]);
         return $pdf->download('laporan-produk.pdf');
     }
 }

@@ -13,16 +13,11 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class SaleController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        $search = $request->search;
-        $status = $request->status;
+        $period = $request->period;
         $from = $request->from;
         $to = $request->to;
-        $period = $request->period;
 
         if ($period === 'harian') {
             $from = $to = now()->toDateString();
@@ -34,27 +29,12 @@ class SaleController extends Controller
             $to = now()->endOfYear()->toDateString();
         }
 
-        $query = Sale::with('customer');
-
-        if ($search) {
-            $query->whereHas('customer', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
-            });
-        }
-
-        if ($status) {
-            $query->where('payment_status', $status);
-        }
-
-        if ($from) {
-            $query->whereDate('sales_date', '>=', $from);
-        }
-
-        if ($to) {
-            $query->whereDate('sales_date', '<=', $to);
-        }
-
-        $sales = $query->latest()->paginate(10)->withQueryString();
+        $sales = Sale::with('customer')
+            ->when($request->search, fn($q) => $q->whereHas('customer', fn($q) => $q->where('name', 'like', "%{$request->search}%")))
+            ->when($request->status, fn($q) => $q->where('payment_status', $request->status))
+            ->when($from, fn($q) => $q->whereDate('sales_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('sales_date', '<=', $to))
+            ->latest()->paginate(10)->withQueryString();
 
         $statQuery = Sale::query()
             ->when($from, fn($q) => $q->whereDate('sales_date', '>=', $from))
@@ -62,7 +42,7 @@ class SaleController extends Controller
 
         $totalSales = (clone $statQuery)->count();
         $totalRevenue = (clone $statQuery)
-            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->collectableRevenue()
             ->value('total') ?? 0;
         $totalDebt = (clone $statQuery)
             ->selectRaw("SUM(CASE WHEN payment_status = 'belum' THEN total_price WHEN payment_status = 'cicil' THEN total_price - paid_amount ELSE 0 END) as total")
@@ -81,50 +61,36 @@ class SaleController extends Controller
 
         $currentMonthRevenue = Sale::whereMonth('sales_date', now()->month)
             ->whereYear('sales_date', now()->year)
-            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->collectableRevenue()
             ->value('total') ?? 0;
 
         $lastMonthRevenue = Sale::whereMonth('sales_date', now()->subMonth()->month)
             ->whereYear('sales_date', now()->subMonth()->year)
-            ->selectRaw("SUM(CASE payment_status WHEN 'lunas' THEN total_price WHEN 'cicil' THEN paid_amount ELSE 0 END) as total")
+            ->collectableRevenue()
             ->value('total') ?? 0;
 
         $revenueGrowth = $lastMonthRevenue > 0
             ? round(($currentMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue * 100)
             : 0;
 
-        $customers = Customer::where('is_active', true)->get();
-        $products = Product::where('is_active', true)->get();
-
-        return view('sales.index', compact(
-            'sales',
-            'totalSales',
-            'totalRevenue',
-            'totalDebt',
-            'todaySales',
-            'debtorCount',
-            'revenueGrowth',
-            'customers',
-            'products',
-            'search',
-            'status',
-            'from',
-            'to',
-            'period'
-        ));
+        return view('sales.index', [
+            'sales' => $sales,
+            'totalSales' => $totalSales,
+            'totalRevenue' => $totalRevenue,
+            'totalDebt' => $totalDebt,
+            'todaySales' => $todaySales,
+            'debtorCount' => $debtorCount,
+            'revenueGrowth' => $revenueGrowth,
+            'customers' => Customer::where('is_active', true)->get(),
+            'products' => Product::where('is_active', true)->get(),
+            'search' => $request->search,
+            'status' => $request->status,
+            'from' => $from,
+            'to' => $to,
+            'period' => $period,
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return redirect()->route('sales.index');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $rules = [
@@ -228,7 +194,7 @@ class SaleController extends Controller
             $customerName = $sale->customer->name ?? 'Pelanggan';
 
             Notification::create([
-                'type' => 'success',
+                'type' => Notification::TYPE_SUCCESS,
                 'title' => 'Penjualan Baru',
                 'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' an. ' . $customerName . ' — Rp ' . number_format($sale->total_price) . ' oleh ' . auth()->user()->name,
                 'action_type' => 'sale.create',
@@ -247,33 +213,17 @@ class SaleController extends Controller
             ->with('success', 'Transaksi berhasil disimpan');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Sale $sale)
     {
-        $sale->load([
-            'customer',
-            'items.product'
-        ]);
-
-        return view(
-            'sales.show',
-            compact('sale')
-        );
+        $sale->load(['customer', 'items.product']);
+        return view('sales.show', compact('sale'));
     }
 
-    /**
-     * Export sales data to PDF.
-     */
     public function exportPdf(Request $request)
     {
-        $search = $request->search;
-        $status = $request->status;
+        $period = $request->period;
         $from = $request->from;
         $to = $request->to;
-
-        $period = $request->period;
 
         if ($period === 'harian') {
             $from = $to = now()->toDateString();
@@ -285,49 +235,28 @@ class SaleController extends Controller
             $to = now()->endOfYear()->toDateString();
         }
 
-        $query = Sale::with('customer');
+        $sales = Sale::with('customer')
+            ->when($request->search, fn($q) => $q->whereHas('customer', fn($q) => $q->where('name', 'like', "%{$request->search}%")))
+            ->when($request->status, fn($q) => $q->where('payment_status', $request->status))
+            ->when($from, fn($q) => $q->whereDate('sales_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('sales_date', '<=', $to))
+            ->latest()->get();
 
-        if ($search) {
-            $query->whereHas('customer', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
-            });
-        }
+        $totalRevenue = $sales->sum(fn($s) => $s->payment_status === 'lunas' ? $s->total_price
+            : ($s->payment_status === 'cicil' ? ($s->paid_amount ?? 0) : 0));
 
-        if ($status) {
-            $query->where('payment_status', $status);
-        }
-
-        if ($from) {
-            $query->whereDate('sales_date', '>=', $from);
-        }
-
-        if ($to) {
-            $query->whereDate('sales_date', '<=', $to);
-        }
-
-        $sales = $query->latest()->get();
-
-        $totalRevenue = $sales->sum(function ($sale) {
-            return $sale->payment_status === 'lunas' ? $sale->total_price
-                : ($sale->payment_status === 'cicil' ? ($sale->paid_amount ?? 0) : 0);
-        });
-
-        $pdf = Pdf::loadView('sales.pdf', compact('sales', 'totalRevenue', 'search', 'status', 'from', 'to', 'period'));
-
+        $pdf = Pdf::loadView('sales.pdf', [
+            'sales' => $sales,
+            'totalRevenue' => $totalRevenue,
+            'search' => $request->search,
+            'status' => $request->status,
+            'from' => $from,
+            'to' => $to,
+            'period' => $period,
+        ]);
         return $pdf->download('laporan-penjualan.pdf');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Sale $sale)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Sale $sale)
     {
         $data = $request->validate([
@@ -359,7 +288,7 @@ class SaleController extends Controller
             'type' => 'info',
             'title' => 'Status Bayar Diubah',
             'message' => '#NQ-' . str_pad($sale->id, 4, '0', STR_PAD_LEFT) . ' → ' . $data['payment_status'] . ' oleh ' . auth()->user()->name,
-            'action_type' => 'sale.update',
+            'action_type' => Notification::ACTION_SALE_UPDATE,
             'notifiable_id' => $sale->id,
             'notifiable_type' => Sale::class,
         ]);
@@ -369,9 +298,6 @@ class SaleController extends Controller
             ->with('success', 'Status pembayaran berhasil diperbarui');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Sale $sale)
     {
         $id = $sale->id;
@@ -379,7 +305,7 @@ class SaleController extends Controller
         $sale->delete();
 
         Notification::create([
-            'type' => 'error',
+            'type' => Notification::TYPE_ERROR,
             'title' => 'Penjualan Dihapus',
             'message' => '#NQ-' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' berhasil dihapus oleh ' . auth()->user()->name,
             'action_type' => 'sale.delete',

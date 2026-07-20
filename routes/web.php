@@ -27,14 +27,14 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('customers', CustomerController::class);
+    Route::resource('customers', CustomerController::class)->except('create', 'edit');
     Route::post('customers/quick-add', [CustomerController::class, 'quickStore'])->name('customers.quick-add');
     Route::post('/customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])
         ->name('customers.toggle-status');
-    Route::resource('products', ProductController::class);
+    Route::resource('products', ProductController::class)->except('show');
     Route::post('/products/{product}/toggle-status', [ProductController::class, 'toggleStatus'])
         ->name('products.toggle-status');
-    Route::resource('expenses', ExpenseController::class);
+    Route::resource('expenses', ExpenseController::class)->except('create', 'edit');
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
@@ -58,7 +58,8 @@ Route::get('/customers/export/pdf', [CustomerController::class, 'exportPdf'])
     ->name('customers.export.pdf');
 
 Route::resource('sales', SaleController::class)
-    ->middleware('auth');
+    ->middleware('auth')
+    ->except('create', 'edit');
 
 Route::get('/reports',[ReportController::class, 'index'])->name('reports.index')
  ->middleware('auth');

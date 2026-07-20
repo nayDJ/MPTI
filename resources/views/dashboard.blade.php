@@ -29,11 +29,11 @@
         </div>
 
         {{-- Alert Stok Kritis --}}
-        @if($criticalStock > 0)
+        @if($stockKritis > 0)
         <div class="bg-error-container border border-error/20 rounded-xl p-4 mb-6 flex items-center gap-3">
             <svg class="w-5 h-5 text-error flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
             <div class="flex-1">
-                <p class="text-sm font-semibold text-on-error-container">{{ $criticalStock }} produk dengan stok kritis (≤ 10 unit)</p>
+                <p class="text-sm font-semibold text-on-error-container">{{ $stockKritis }} produk dengan stok kritis (≤ 10 unit)</p>
                 <p class="text-xs text-on-error-container mt-0.5 opacity-80">Segera lakukan restock untuk menghindari kehabisan stok</p>
             </div>
             <a href="{{ route('products.index') }}" class="text-sm font-medium text-on-error-container hover:underline underline whitespace-nowrap">Lihat Produk</a>
@@ -101,7 +101,7 @@
                     <span class="material-symbols-outlined text-error">warning</span>
                 </div>
                 <h2 class="text-3xl font-bold text-error">
-                    {{ $criticalStock }}
+                    {{ $stockKritis }}
                 </h2>
                 <p class="text-xs text-error mt-1">Stok ≤ 10 unit</p>
             </a>
