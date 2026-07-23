@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Models\Notification;
 use App\Models\Product;
+use App\Models\ProductComponent;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -66,6 +67,31 @@ class ModelTest extends TestCase
         Sale::factory()->count(3)->create(['customer_id' => $customer->id]);
 
         $this->assertCount(3, $customer->sales);
+    }
+
+    public function test_product_component_auto_decrement(): void
+    {
+        $parent = Product::factory()->create(['stock' => 10, 'track_stock' => true]);
+        $component = Product::factory()->create(['stock' => 20, 'track_stock' => true]);
+        ProductComponent::factory()->create([
+            'product_id' => $parent->id,
+            'component_product_id' => $component->id,
+            'quantity' => 2,
+        ]);
+
+        $this->assertCount(1, $parent->components);
+        $this->assertEquals(20, $component->stock);
+    }
+
+    public function test_stock_unchanged_when_track_stock_disabled(): void
+    {
+        $product = Product::factory()->create(['stock' => 5, 'track_stock' => false]);
+
+        $customer = Customer::factory()->create();
+        $sale = Sale::factory()->create(['customer_id' => $customer->id]);
+        $sale->items()->create(['product_id' => $product->id, 'quantity' => 3, 'subtotal' => 30000]);
+
+        $this->assertEquals(5, $product->fresh()->stock);
     }
 
     public function test_sale_has_items_relationship(): void

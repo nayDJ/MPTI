@@ -14,6 +14,7 @@
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.4",
+        "laravel/dusk": "^8.6",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -49,6 +50,11 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "test:all": [
+            "@php artisan migrate:fresh --env=dusk.local --seed",
+            "@php artisan serve --port=8080 &>/dev/null & sleep 2 && php artisan dusk; kill $(lsof -ti:8080 2>/dev/null) 2>/dev/null || true",
+            "vendor/bin/phpunit"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

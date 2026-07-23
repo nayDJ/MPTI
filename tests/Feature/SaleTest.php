@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\ProductComponent;
 use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -89,6 +90,68 @@ class SaleTest extends TestCase
         $response->assertRedirect(route('sales.index'));
         $this->assertEquals('lunas', $sale->fresh()->payment_status);
         $this->assertEquals(100000, (int) $sale->fresh()->paid_amount);
+    }
+
+    public function test_store_decrements_stock(): void
+    {
+        $customer = Customer::factory()->create();
+        $product = Product::factory()->create(['stock' => 10, 'price' => 10000, 'track_stock' => true]);
+
+        $this->actingAs($this->user)->post(route('sales.store'), [
+            'customer_id' => $customer->id,
+            'sales_date' => now()->toDateString(),
+            'payment_status' => 'lunas',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 3],
+            ],
+        ]);
+
+        $this->assertEquals(7, $product->fresh()->stock);
+    }
+
+    public function test_store_decrements_component_stock(): void
+    {
+        $customer = Customer::factory()->create();
+        $product = Product::factory()->create(['stock' => 10, 'price' => 10000, 'track_stock' => true]);
+        $component = Product::factory()->create(['stock' => 20, 'price' => 5000, 'track_stock' => true]);
+        ProductComponent::factory()->create([
+            'product_id' => $product->id,
+            'component_product_id' => $component->id,
+            'quantity' => 2,
+        ]);
+
+        $this->actingAs($this->user)->post(route('sales.store'), [
+            'customer_id' => $customer->id,
+            'sales_date' => now()->toDateString(),
+            'payment_status' => 'lunas',
+            'items' => [
+                ['product_id' => $product->id, 'quantity' => 3],
+            ],
+        ]);
+
+        $this->assertEquals(7, $product->fresh()->stock);
+        $this->assertEquals(14, $component->fresh()->stock, 'Component stock should decrement by qty * component_qty');
+    }
+
+    public function test_empty_index_returns_view(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('sales.index'));
+        $response->assertOk();
+    }
+
+    public function test_index_filters_by_status(): void
+    {
+        Sale::factory()->lunas()->count(3)->create();
+        Sale::factory()->belum()->count(2)->create();
+
+        $response = $this->actingAs($this->user)->get(route('sales.index', ['status' => 'lunas']));
+        $response->assertOk();
+    }
+
+    public function test_export_pdf_returns_pdf(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('sales.export.pdf'));
+        $response->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_destroy_deletes_sale_and_items(): void

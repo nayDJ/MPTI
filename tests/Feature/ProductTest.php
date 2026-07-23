@@ -67,6 +67,33 @@ class ProductTest extends TestCase
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
+    public function test_index_pagination(): void
+    {
+        Product::factory()->count(15)->create();
+
+        $page1 = $this->actingAs($this->user)->get(route('products.index', ['page' => 1]));
+        $page1->assertOk();
+
+        $page2 = $this->actingAs($this->user)->get(route('products.index', ['page' => 2]));
+        $page2->assertOk();
+    }
+
+    public function test_index_filters_by_category(): void
+    {
+        Product::factory()->create(['name' => 'Coffee', 'category' => 'Minuman']);
+        Product::factory()->create(['name' => 'Tea', 'category' => 'Minuman']);
+        Product::factory()->create(['name' => 'Nasi Goreng', 'category' => 'Makanan']);
+
+        $response = $this->actingAs($this->user)->get(route('products.index', ['category' => 'Minuman']));
+        $response->assertOk();
+    }
+
+    public function test_export_pdf_returns_pdf(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('products.export.pdf'));
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_toggle_status_changes_active_state(): void
     {
         $product = Product::factory()->create(['is_active' => true]);

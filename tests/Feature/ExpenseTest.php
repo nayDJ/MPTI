@@ -67,6 +67,12 @@ class ExpenseTest extends TestCase
         $this->assertDatabaseHas('expenses', ['description' => 'Updated expense', 'amount' => 20000]);
     }
 
+    public function test_export_pdf_returns_pdf(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('expenses.export.pdf'));
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_destroy_deletes_expense(): void
     {
         $expense = Expense::factory()->create();

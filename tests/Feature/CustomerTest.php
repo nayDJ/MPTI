@@ -80,6 +80,30 @@ class CustomerTest extends TestCase
         $this->assertEquals(1, $customer->fresh()->is_active);
     }
 
+    public function test_show_returns_404_for_missing_customer(): void
+    {
+        $response = $this->actingAs($this->user)->get('/customers/99999');
+        $response->assertNotFound();
+    }
+
+    public function test_index_search_filters_by_name(): void
+    {
+        Customer::factory()->create(['name' => 'Budi Santoso']);
+        Customer::factory()->create(['name' => 'Siti Rahma']);
+        Customer::factory()->create(['name' => 'Ahmad Budiman']);
+
+        $response = $this->actingAs($this->user)->get(route('customers.index', ['search' => 'Budi']));
+        $response->assertOk();
+        $response->assertSee('Budi Santoso');
+        $response->assertSee('Ahmad Budiman');
+    }
+
+    public function test_export_pdf_returns_pdf(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('customers.export.pdf'));
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_quick_store_returns_json(): void
     {
         $response = $this->actingAs($this->user)->post(route('customers.quick-add'), [
