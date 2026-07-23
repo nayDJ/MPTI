@@ -2,10 +2,14 @@
 
 namespace App\Models;
 
+use Database\Factories\NotificationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
+    /** @use HasFactory<NotificationFactory> */
+    use HasFactory;
     // ponytail: centralize notification types and actions (was hardcoded in 14 places)
     const TYPE_SUCCESS = 'success';
     const TYPE_ERROR = 'error';

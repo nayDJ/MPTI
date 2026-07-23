@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('notifications', function (Blueprint $table) {
+            $table->dropIndex(['notifiable_type', 'notifiable_id']);
+        });
+
+        Schema::table('notifications', function (Blueprint $table) {
             // ponytail: drop unused polymorphic columns (80% NULL, never used)
             $table->dropColumn(['notifiable_id', 'notifiable_type']);
         });

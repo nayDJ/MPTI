@@ -74,17 +74,21 @@ class ReportController extends Controller
             ->whereBetween('sales_date', [$currentStart, $currentEnd])
             ->sum(DB::raw('total_price - COALESCE(paid_amount, 0)'));
 
-        $incomeMonthly = Sale::selectRaw("MONTH(sales_date) as month")
+        $monthFn = DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%%m', %s) AS INTEGER)"
+            : "MONTH(%s)";
+
+        $incomeMonthly = Sale::selectRaw(sprintf($monthFn, 'sales_date') . ' as month')
             ->selectRaw("SUM(CASE WHEN payment_status = 'lunas' THEN total_price WHEN payment_status = 'cicil' THEN paid_amount ELSE 0 END) as total")
             ->whereYear('sales_date', now()->year)
-            ->groupBy(DB::raw('MONTH(sales_date)'))
+            ->groupBy(DB::raw(sprintf($monthFn, 'sales_date')))
             ->orderBy('month')
             ->get()
             ->keyBy('month');
 
-        $expenseMonthly = Expense::selectRaw('MONTH(expense_date) as month, SUM(amount) as total')
+        $expenseMonthly = Expense::selectRaw(sprintf($monthFn, 'expense_date') . ' as month, SUM(amount) as total')
             ->whereYear('expense_date', now()->year)
-            ->groupBy(DB::raw('MONTH(expense_date)'))
+            ->groupBy(DB::raw(sprintf($monthFn, 'expense_date')))
             ->orderBy('month')
             ->get()
             ->keyBy('month');
